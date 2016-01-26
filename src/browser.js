@@ -5,7 +5,7 @@
     var VegaWrapper = require('./VegaWrapper');
 
     module.exports = function (load, logger) {
-        return new VegaWrapper(true, false, null, load, logger, _.extend, urllib.parse, urllib.format, document.location.protocol);
+        return new VegaWrapper(true, false, {}, {}, {}, load, logger, _.extend, urllib.parse, urllib.format);
     };
 
 
@@ -18,6 +18,6 @@
     if (a.host === '') {
         a.href = a.href;
     }
-    domain = a.hostname.toLowerCase();
+    var domain = a.hostname.toLowerCase();
 
 }( jQuery, mediaWiki ) );

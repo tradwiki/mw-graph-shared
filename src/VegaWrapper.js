@@ -68,22 +68,27 @@ function VegaWrapper(useXhr, isTrusted, httpDomains, httpsDomains, domainMap, lo
 
 module.exports = VegaWrapper;
 
-VegaWrapper.prototype.sanitizeHost = function (domain) {
+/**
+ * Check if host was listed in the allowed domains, normalize it, and get correct protocol
+ * @param {string} domain
+ * @returns {Object}
+ */
+VegaWrapper.prototype.sanitizeHost = function (host) {
     // TODO: Optimize 'en.m.wikipedia.org' -> 'en.wikipedia.org'
 
-    // First, map the domain
-    domain = (this.domainMap && this.domainMap[domain]) || domain;
+    // First, map the host
+    host = (this.domainMap && this.domainMap[host]) || host;
 
     var result = {
-        domain: domain
+        host: host
     };
 
-    if (this.httpsHostsRe.test(domain)) {
+    if (this.httpsHostsRe.test(host)) {
         result.protocol = 'https';
-    } else if (this.httpHostsRe.test(domain)) {
+    } else if (this.httpHostsRe.test(host)) {
         result.protocol = 'http';
     } else {
-        result = false;
+        result = undefined;
     }
 
     return result;
@@ -97,15 +102,11 @@ VegaWrapper.prototype.sanitizeHost = function (domain) {
 VegaWrapper.prototype.sanitizeUrl = function (opt) {
     var urlParts = this.parseUrl(opt);
 
-    var targetProtocol,
-        host = urlParts.host;
-    if (this.httpsHostsRe.test(host)) {
-        targetProtocol = 'https';
-    } else if (this.httpHostsRe.test(host)) {
-        targetProtocol = 'http';
-    } else {
+    var sanitizedHost = this.sanitizeHost(urlParts.host);
+    if (!sanitizedHost) {
         throw new Error('URL hostname is not whitelisted: ' + JSON.stringify(opt.url));
     }
+    urlParts.host = sanitizedHost.host;
 
     switch (urlParts.protocol) {
         case 'http:':
@@ -121,7 +122,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
             // Call to api.php - ignores the path parameter, and only uses the query
             urlParts.query = this.objExtender(urlParts.query, {format: 'json', formatversion: '2'});
             urlParts.pathname = '/w/api.php';
-            urlParts.protocol = targetProtocol;
+            urlParts.protocol = sanitizedHost.protocol;
             opt.isApiCall = true;
             break;
 
@@ -134,7 +135,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
             }
             // keep urlParts.query
             // keep urlParts.pathname
-            urlParts.protocol = targetProtocol;
+            urlParts.protocol = sanitizedHost.protocol;
             break;
 
         case 'wikiraw:':
@@ -156,7 +157,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
                 titles: urlParts.pathname.substring(1)
             };
             urlParts.pathname = '/w/api.php';
-            urlParts.protocol = targetProtocol;
+            urlParts.protocol = sanitizedHost.protocol;
             opt.isApiCall = true;
             opt.extractApiContent = true;
             break;
@@ -165,12 +166,12 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
             // wikirawupload://upload.wikimedia.org/wikipedia/commons/3/3e/Einstein_1921.jpg
             // Get an image for the graph, e.g. from commons
             // This tag specifies any content from the uploads.* domain, without query params
-            if (!/^upload\./.test(host)) {
+            if (!/^upload\./.test(urlParts.host)) {
                 throw new Error('wikirawupload: protocol must reference upload.* host: ' + JSON.stringify(opt.url));
             }
             urlParts.query = null;
             // keep urlParts.pathname;
-            urlParts.protocol = targetProtocol;
+            urlParts.protocol = sanitizedHost.protocol;
             break;
 
         default:

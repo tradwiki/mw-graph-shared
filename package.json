@@ -1,0 +1,33 @@
+{
+  "name": "graph-shared",
+  "version": "0.0.0",
+  "description": "Shared code for Wikipedia's Graph extension and Graphoid Service",
+  "main": "src/node.js",
+  "browser": "src/browser.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nyurik/graph-shared.git"
+  },
+  "keywords": [
+    "graph",
+    "wikimedia",
+    "graphoid"
+  ],
+  "author": {
+    "name": "Yuri Astrakhan",
+    "email": "yurik@wikimedia.org"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nyurik/graph-shared/issues"
+  },
+  "devDependencies": {
+    "browserify": "^12.0.1"
+  },
+  "dependencies": {
+    "underscore": "^1.8.3"
+  }
+}

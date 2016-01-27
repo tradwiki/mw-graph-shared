@@ -8,7 +8,7 @@ var VegaWrapper = require('./VegaWrapper');
 
 module.exports = function(httpDomains, httpsDomains, domainMap, load, logger) {
     return new VegaWrapper(
-        false, false, httpDomains, httpsDomains, domainMap, load, logger, _.extend,
+        false, true, httpDomains, httpsDomains, domainMap, load, logger, _.extend,
         function (opt) {
             var urlParts = urllib.parse(opt.url);
             // reduce confusion, only keep expected values

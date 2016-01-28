@@ -82,9 +82,9 @@ VegaWrapper.prototype.sanitizeHost = function (host) {
     };
 
     if (this.httpsHostsRe.test(host)) {
-        result.protocol = 'https:';
+        result.protocol = 'https';
     } else if (this.httpHostsRe.test(host)) {
-        result.protocol = 'http:';
+        result.protocol = 'http';
     } else {
         result = undefined;
     }
@@ -111,15 +111,15 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
     }
 
     switch (urlParts.protocol) {
-        case 'http:':
-        case 'https:':
+        case 'http':
+        case 'https':
             if (!this.isTrusted) {
                 throw new Error('HTTP and HTTPS protocols not supported for untrusted graphs');
             }
             // keep the original URL
             break;
 
-        case 'wikiapi:':
+        case 'wikiapi':
             // wikiapi:///?action=query&list=allpages
             // Call to api.php - ignores the path parameter, and only uses the query
             urlParts.query = this.objExtender(urlParts.query, {format: 'json', formatversion: '2'});
@@ -128,7 +128,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
             opt.isApiCall = true;
             break;
 
-        case 'wikirest:':
+        case 'wikirest':
             // wikirest:///api/rest_v1/page/...
             // Call to RESTbase api - requires the path to start with "/api/"
             // The /api/... path is safe for GET requests
@@ -140,7 +140,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
             urlParts.protocol = sanitizedHost.protocol;
             break;
 
-        case 'wikiraw:':
+        case 'wikiraw':
             // wikiraw:///MyPage/data
             // Get raw content of a wiki page, where the path is the title
             // of the page with an additional leading '/' which gets removed.
@@ -164,7 +164,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
             opt.extractApiContent = true;
             break;
 
-        case 'wikirawupload:':
+        case 'wikirawupload':
             // wikirawupload://upload.wikimedia.org/wikipedia/commons/3/3e/Einstein_1921.jpg
             // Get an image for the graph, e.g. from commons
             // This tag specifies any content from the uploads.* domain, without query params

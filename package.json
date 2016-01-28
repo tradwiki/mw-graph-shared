@@ -2,8 +2,7 @@
   "name": "graph-shared",
   "version": "0.0.0",
   "description": "Shared code for Wikipedia's Graph extension and Graphoid Service",
-  "main": "src/node.js",
-  "browser": "src/browser.js",
+  "main": "src/VegaWrapper.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

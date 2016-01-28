@@ -3,19 +3,19 @@
 
 /**
  * Shared library to wrap around vega code
+ * @param {Object} load Vega loader object to use and override
  * @param {boolean} useXhr true if we should use XHR, false for node.js http loading
  * @param {boolean} isTrusted true if the graph spec can be trusted
  * @param {string[]} httpDomains list of allowed http domains
  * @param {string[]} httpsDomains list of allowed https domains
  * @param {Object} domainMap domain remapping
- * @param {Object} load Vega loader object to use and override
  * @param {Function} logger
  * @param {Function} objExtender $.extend in browser, _.extend in NodeJs
  * @param {Function} parseUrl
  * @param {Function} formatUrl
  * @constructor
  */
-function VegaWrapper(useXhr, isTrusted, httpDomains, httpsDomains, domainMap, load, logger, objExtender, parseUrl, formatUrl) {
+function VegaWrapper(load, useXhr, isTrusted, httpDomains, httpsDomains, domainMap, logger, objExtender, parseUrl, formatUrl) {
     var self = this;
     self.isTrusted = isTrusted;
     self.logger = logger;
@@ -70,12 +70,10 @@ module.exports = VegaWrapper;
 
 /**
  * Check if host was listed in the allowed domains, normalize it, and get correct protocol
- * @param {string} domain
+ * @param {string} host
  * @returns {Object}
  */
 VegaWrapper.prototype.sanitizeHost = function (host) {
-    // TODO: Optimize 'en.m.wikipedia.org' -> 'en.wikipedia.org'
-
     // First, map the host
     host = (this.domainMap && this.domainMap[host]) || host;
 
@@ -84,9 +82,9 @@ VegaWrapper.prototype.sanitizeHost = function (host) {
     };
 
     if (this.httpsHostsRe.test(host)) {
-        result.protocol = 'https';
+        result.protocol = 'https:';
     } else if (this.httpHostsRe.test(host)) {
-        result.protocol = 'http';
+        result.protocol = 'http:';
     } else {
         result = undefined;
     }
@@ -107,6 +105,10 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
         throw new Error('URL hostname is not whitelisted: ' + JSON.stringify(opt.url));
     }
     urlParts.host = sanitizedHost.host;
+    if (!urlParts.protocol) {
+        // Update protocol-relative URLs
+        urlParts.protocol = sanitizedHost.protocol;
+    }
 
     switch (urlParts.protocol) {
         case 'http:':
@@ -154,7 +156,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
                 action: 'query',
                 prop: 'revisions',
                 rvprop: 'content',
-                titles: urlParts.pathname.substring(1)
+                titles: decodeURIComponent(urlParts.pathname.substring(1))
             };
             urlParts.pathname = '/w/api.php';
             urlParts.protocol = sanitizedHost.protocol;

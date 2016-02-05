@@ -114,7 +114,9 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
         case 'http':
         case 'https':
             if (!this.isTrusted) {
-                throw new Error('HTTP and HTTPS protocols not supported for untrusted graphs');
+                throw new Error('HTTP and HTTPS protocols are not supported for untrusted graphs.\n' +
+                    'Use wikiraw:, wikiapi:, wikirest:, and wikirawupload: protocols.\n' +
+                    'See https://www.mediawiki.org/wiki/Extension:Graph#External_data');
             }
             // keep the original URL
             break;

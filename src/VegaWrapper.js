@@ -217,7 +217,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
         default:
             throw new Error('Unknown protocol ' + JSON.stringify(opt.url));
     }
-    return this.formatUrl(urlParts);
+    return this.formatUrl(urlParts, opt);
 };
 
 /**

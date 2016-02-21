@@ -71,6 +71,16 @@ function VegaWrapper(load, useXhr, isTrusted, domains, domainMap, logger, objExt
             return load.http(url, opt, cb);
         }
     };
+
+    load.sanitizeUrl = self.sanitizeUrl.bind(self);
+
+    // Prevent accidental use
+    load.file = function() { throw new Error('Disabled'); };
+    if (useXhr) {
+        load.http = load.file;
+    } else {
+        load.xhr = load.file;
+    }
 }
 
 module.exports = VegaWrapper;
@@ -187,7 +197,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
             if (!this.uploadHostsRe.test(urlParts.host)) {
                 throw new Error('wikirawupload: protocol must only reference allowed upload hosts: ' + JSON.stringify(opt.url));
             }
-            urlParts.query = null;
+            urlParts.query = {};
             // keep urlParts.pathname;
             urlParts.protocol = sanitizedHost.protocol;
             break;

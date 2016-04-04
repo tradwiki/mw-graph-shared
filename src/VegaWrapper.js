@@ -216,6 +216,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 break;
 
             case 'wikiraw:':
+            case 'wikitabular:':
                 // wikiraw:///MyPage/data
                 // Get raw content of a wiki page, where the path is the title
                 // of the page with an additional leading '/' which gets removed.
@@ -364,29 +365,50 @@ VegaWrapper.prototype.dataParser = function dataParser(error, data, opt, callbac
 };
 
 /**
+ * Parses the response from MW Api, throwing an error or logging warnings
+ */
+VegaWrapper.prototype.parseMWApiResponse = function parseMWApiResponse(data) {
+    data = JSON.parse(data);
+    if (data.error) {
+        throw new Error('API error: ' + JSON.stringify(data.error));
+    }
+    if (data.warnings) {
+        this.logger('API warnings: ' + JSON.stringify(data.warnings));
+    }
+    return data;
+};
+
+/**
  * Performs post-processing of the data requested by the graph's spec, and throw on error
  */
 VegaWrapper.prototype.parseDataOrThrow = function parseDataOrThrow(data, opt) {
     switch (opt.graphProtocol) {
         case 'wikiapi:':
+            data = this.parseMWApiResponse(data);
+            break;
         case 'wikiraw:':
-            // This was an API call - check for errors
-            data = JSON.parse(data);
-            if (data.error) {
-                throw new Error('API error: ' + JSON.stringify(data.error));
-            }
-            if (data.warnings) {
-                this.logger('API warnings: ' + JSON.stringify(data.warnings));
-            }
-            if (opt.graphProtocol === 'wikiraw:') {
-                try {
-                    data = data.query.pages[0].revisions[0].content;
-                } catch (e) {
-                    throw new Error('Page content not available ' + opt.url);
-                }
+            data = this.parseMWApiResponse(data);
+            try {
+                data = data.query.pages[0].revisions[0].content;
+            } catch (e) {
+                throw new Error('Page content not available ' + opt.url);
             }
             break;
-
+        case 'wikitabular:':
+            data = this.parseMWApiResponse(data);
+            if (!Array.isArray(data.rows)) {
+                throw new Error('page is not a valid tabular data');
+            }
+            var result = [];
+            data.rows.forEach(function(v) {
+                var row = {};
+                for (var i = 0; i < data.headers.length; i++) {
+                    row[data.headers[i]] = v[i];
+                }
+                result.push(row);
+            });
+            data = result;
+            break;
         case 'wikidatasparql:':
             data = JSON.parse(data);
             if (!data.results || !Array.isArray(data.results.bindings)) {

@@ -1,6 +1,10 @@
 'use strict';
 /* global module */
 
+var makeValidator = require('domain-validator');
+
+module.exports = VegaWrapper;
+
 /**
  * Shared library to wrap around vega code
  * @param {Object} load Vega loader object to use and override
@@ -26,23 +30,6 @@ function VegaWrapper(load, useXhr, isTrusted, domains, domainMap, logger, objExt
     self.objExtender = objExtender;
     self.parseUrl = parseUrl;
     self.formatUrl = formatUrl;
-
-    // Convert domains to a regex:  (any-subdomain)\.(wikipedia\.org|wikivoyage\.org|...)
-    function makeValidator(domains, allowSubdomains) {
-        if (!domains || domains.length === 0) return {
-            // Optimization - always return false
-            test: function () {
-                return false;
-            }
-        };
-        return new RegExp(
-            (allowSubdomains ? '^([^@/:]*\.)?(' : '^(') +
-            domains
-                .map(function (s) {
-                    return s.replace('.', '\\.');
-                })
-                .join('|') + ')$', 'i');
-    }
 
     self.httpHostsRe = makeValidator(domains.http, true);
     self.httpsHostsRe = makeValidator(domains.https, true);
@@ -83,14 +70,12 @@ function VegaWrapper(load, useXhr, isTrusted, domains, domainMap, logger, objExt
     }
 }
 
-module.exports = VegaWrapper;
-
 /**
  * Check if host was listed in the allowed domains, normalize it, and get correct protocol
  * @param {string} host
  * @returns {Object}
  */
-VegaWrapper.prototype.sanitizeHost = function (host) {
+VegaWrapper.prototype.sanitizeHost = function sanitizeHost(host) {
     // First, map the host
     host = (this.domainMap && this.domainMap[host]) || host;
 
@@ -114,7 +99,7 @@ VegaWrapper.prototype.sanitizeHost = function (host) {
  * @param {Object} opt passed by the vega loader. May be altered with optional "isApiCall" and "extractApiContent"
  * @returns {boolean} true on success
  */
-VegaWrapper.prototype.sanitizeUrl = function (opt) {
+VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
     var urlParts = this.parseUrl(opt);
 
     var sanitizedHost = this.sanitizeHost(urlParts.host);
@@ -233,7 +218,7 @@ VegaWrapper.prototype.sanitizeUrl = function (opt) {
 /**
  * Performs post-processing of the data requested by the graph's spec
  */
-VegaWrapper.prototype.dataParser = function (error, data, opt, callback) {
+VegaWrapper.prototype.dataParser = function dataParser(error, data, opt, callback) {
     if (error) {
         callback(error);
         return;

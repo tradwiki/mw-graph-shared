@@ -100,6 +100,9 @@ VegaWrapper.prototype.sanitizeHost = function sanitizeHost(host) {
  * @returns {boolean} true on success
  */
 VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
+    // In some cases we may receive a badly formed URL in a form   customprotocol:https://...
+    opt.url = opt.url.replace(/^([a-z]+:)https?:\/\//, '$1//');
+
     var urlParts = this.parseUrl(opt);
 
     var sanitizedHost = this.sanitizeHost(urlParts.host);

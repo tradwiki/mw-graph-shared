@@ -105,7 +105,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
 
     var sanitizedHost = this.sanitizeHost(urlParts.host);
     if (!sanitizedHost) {
-        throw new Error('URL hostname is not whitelisted: ' + JSON.stringify(opt.url));
+        throw new Error('URL hostname is not whitelisted: ' + opt.url);
     }
     urlParts.host = sanitizedHost.host;
     if (!urlParts.protocol) {
@@ -173,7 +173,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
             // wikirawupload://upload.wikimedia.org/wikipedia/commons/3/3e/Einstein_1921.jpg
             // Get an image for the graph, e.g. from commons
             // This tag specifies any content from the uploads.* domain, without query params
-            this._validateExternalService(urlParts);
+            this._validateExternalService(urlParts, opt.url);
             urlParts.query = {};
             // keep urlParts.pathname;
             break;
@@ -182,9 +182,9 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
             // wikidatasparql:///?query=<QUERY>
             // Runs a SPARQL query, converting it to
             // https://query.wikidata.org/bigdata/namespace/wdq/sparql?format=json&query=...
-            this._validateExternalService(urlParts);
+            this._validateExternalService(urlParts, opt.url);
             if (!urlParts.query || !urlParts.query.query) {
-                throw new Error('wikidatasparql: missing query parameter in: ' + JSON.stringify(opt.url));
+                throw new Error('wikidatasparql: missing query parameter in: ' + opt.url);
             }
             urlParts.query = { format: 'json', query: urlParts.query.query };
             urlParts.pathname = '/bigdata/namespace/wdq/sparql';
@@ -194,21 +194,21 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
             // geoshape:///?ids=Q16,Q30
             // Get geo shapes data from OSM database by supplying Wikidata IDs
             // https://maps.wikimedia.org/shape?ids=Q16,Q30
-            this._validateExternalService(urlParts);
+            this._validateExternalService(urlParts, opt.url);
             // the query object is not modified
             urlParts.pathname = '/shape';
             break;
 
         default:
-            throw new Error('Unknown protocol ' + JSON.stringify(opt.url));
+            throw new Error('Unknown protocol ' + opt.url);
     }
     return this.formatUrl(urlParts, opt);
 };
 
-VegaWrapper.prototype._validateExternalService = function _validateExternalService(urlParts) {
+VegaWrapper.prototype._validateExternalService = function _validateExternalService(urlParts, url) {
     var protocol = urlParts.protocol;
     if (!this.domains[protocol]) {
-        throw new Error(protocol + ': protocol is disabled: ' + JSON.stringify(opt.url));
+        throw new Error(protocol + ': protocol is disabled: ' + url);
     }
     if (urlParts.isRelativeHost) {
         urlParts.host = this.domains[protocol][0];
@@ -217,7 +217,7 @@ VegaWrapper.prototype._validateExternalService = function _validateExternalServi
         urlParts.protocol = sanitizedHost.protocol;
     }
     if (!this.validators[protocol].test(urlParts.host)) {
-        throw new Error(protocol + ': URL must either be relative (' + protocol + '///...), or use one of the allowed hosts: ' + JSON.stringify(opt.url));
+        throw new Error(protocol + ': URL must either be relative (' + protocol + '///...), or use one of the allowed hosts: ' + url);
     }
 };
 

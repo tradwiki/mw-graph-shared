@@ -20,7 +20,5 @@
     "domain-validator": "^0.0.2"
   },
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/nyurik/graph-shared/issues"
-  }
+  "bugs": "https://github.com/nyurik/graph-shared/issues"
 }

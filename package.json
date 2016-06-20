@@ -1,6 +1,6 @@
 {
   "name": "graph-shared",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Shared code for Wikipedia's Graph extension and Graphoid Service",
   "main": "src/VegaWrapper.js",
   "scripts": {

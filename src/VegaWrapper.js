@@ -193,12 +193,9 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
         case 'geoshape':
             // geoshape:///?ids=Q16,Q30
             // Get geo shapes data from OSM database by supplying Wikidata IDs
-            // https://maps.wikimedia.org/shape?q=Q16,Q30
+            // https://maps.wikimedia.org/shape?ids=Q16,Q30
             this._validateExternalService(urlParts);
-            if (!urlParts.query || !urlParts.query.ids) {
-                throw new Error('geoshape: missing ids parameter in: ' + JSON.stringify(opt.url));
-            }
-            urlParts.query = { q: urlParts.query.ids };
+            // the query object is not modified
             urlParts.pathname = '/shape';
             break;
 

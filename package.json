@@ -4,7 +4,7 @@
   "description": "Shared code for Wikipedia's Graph extension and Graphoid Service",
   "main": "src/VegaWrapper.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -18,6 +18,10 @@
   "author": "Yuri Astrakhan <yurik@wikimedia.org>",
   "dependencies": {
     "domain-validator": "^0.0.2"
+  },
+  "devDependencies": {
+    "underscore": "^1.8.3",
+    "mocha": "^2.4.5"
   },
   "license": "MIT",
   "bugs": "https://github.com/nyurik/graph-shared/issues"

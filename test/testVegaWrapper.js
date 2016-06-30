@@ -203,6 +203,10 @@ describe('vegaWrapper', function() {
         fail('geoshape:///?aquery=1');
         pass('geoshape:///?ids=1', 'http://geoshape.nonsec.org/shape?ids=1');
         pass('geoshape://geoshape.sec.org/?ids=a1,b4', 'https://geoshape.sec.org/shape?ids=a1%2Cb4');
+
+        pass('wikifile:///Einstein_1921.jpg', 'https://domain.sec.org/wiki/Special:Redirect/file/Einstein_1921.jpg');
+        pass('wikifile:///Einstein_1921.jpg?width=10', 'https://domain.sec.org/wiki/Special:Redirect/file/Einstein_1921.jpg?width=10');
+        pass('wikifile://sec.org/Einstein_1921.jpg', 'https://sec.org/wiki/Special:Redirect/file/Einstein_1921.jpg');
     });
 
 });

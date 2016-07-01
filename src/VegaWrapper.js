@@ -1,7 +1,8 @@
 'use strict';
 /* global module */
 
-var makeValidator = require('domain-validator');
+var makeValidator = require('domain-validator'),
+    parseWikidataValue = require('wd-type-parser');
 
 module.exports = VegaWrapper;
 
@@ -98,7 +99,7 @@ VegaWrapper.prototype.testHost = function testHost(protocol, host) {
 
 /**this
  * Validate and update urlObj to be safe for client-side and server-side usage
- * @param {Object} opt passed by the vega loader. May be altered with optional "isApiCall" and "extractApiContent"
+ * @param {Object} opt passed by the vega loader, and will add 'graphProtocol' param
  * @returns {boolean} true on success
  */
 VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
@@ -117,6 +118,8 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
         urlParts.protocol = sanitizedHost.protocol;
     }
 
+    // Save original procotol to post-process the data
+    opt.graphProtocol = urlParts.protocol;
     switch (urlParts.protocol) {
         case 'http':
         case 'https':
@@ -134,7 +137,6 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
             urlParts.query = this.objExtender(urlParts.query, {format: 'json', formatversion: '2'});
             urlParts.pathname = '/w/api.php';
             urlParts.protocol = sanitizedHost.protocol;
-            opt.isApiCall = true;
             break;
 
         case 'wikirest':
@@ -170,8 +172,6 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
             };
             urlParts.pathname = '/w/api.php';
             urlParts.protocol = sanitizedHost.protocol;
-            opt.isApiCall = true;
-            opt.extractApiContent = true;
             break;
 
         case 'wikifile':
@@ -245,25 +245,44 @@ VegaWrapper.prototype.dataParser = function dataParser(error, data, opt, callbac
         callback(error);
         return;
     }
-    if (opt.isApiCall) {
-        // This was an API call - check for errors
-        var json = JSON.parse(data);
-        if (json.error) {
-            error = new Error('API error: ' + JSON.stringify(json.error));
-            data = undefined;
-        } else {
-            if (json.warnings) {
-                this.logger('API warnings: ' + JSON.stringify(json.warnings));
-            }
-            if (opt.extractApiContent) {
-                try {
-                    data = json.query.pages[0].revisions[0].content;
-                } catch (e) {
-                    data = undefined;
-                    error = new Error('Page content not available ' + opt.url);
+    switch (opt.graphProtocol) {
+        case 'wikiapi':
+        case 'wikiraw':
+            // This was an API call - check for errors
+            data = JSON.parse(data);
+            if (data.error) {
+                error = new Error('API error: ' + JSON.stringify(data.error));
+                data = undefined;
+            } else {
+                if (data.warnings) {
+                    this.logger('API warnings: ' + JSON.stringify(data.warnings));
+                }
+                if (opt.graphProtocol === 'wikiraw') {
+                    try {
+                        data = data.query.pages[0].revisions[0].content;
+                    } catch (e) {
+                        data = undefined;
+                        error = new Error('Page content not available ' + opt.url);
+                    }
                 }
             }
-        }
+            break;
+
+        case 'wikidatasparql':
+            data = JSON.parse(data);
+            if (!data.results || !Array.isArray(data.results.bindings)) {
+                throw new Error('SPARQL query result does not have "results.bindings"');
+            }
+            data = data.results.bindings.map(function (row) {
+                var key, result = {};
+                for (key in row) {
+                    if (row.hasOwnProperty(key)) {
+                        result[key] = parseWikidataValue(row[key]);
+                    }
+                }
+                return result;
+            });
+            break;
     }
     callback(error, data);
 };

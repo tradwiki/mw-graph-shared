@@ -209,4 +209,37 @@ describe('vegaWrapper', function() {
         pass('wikifile://sec.org/Einstein_1921.jpg', 'https://sec.org/wiki/Special:Redirect/file/Einstein_1921.jpg');
     });
 
+    it('sanitizeUrl for type=open', function () {
+        var wraper = createWrapper(true, false),
+            pass = function (url, expected) {
+                assert.equal(wraper.sanitizeUrl({url: url, type: 'open', domain: 'domain.sec.org'}), expected, url)
+            },
+            fail = function (url) {
+                expectError(function () {
+                    return wraper.sanitizeUrl({url: url, type: 'open', domain: 'domain.sec.org'});
+                }, url, ['VegaWrapper.sanitizeUrl', 'VegaWrapper._validateExternalService']);
+            };
+
+        fail('wikiapi://sec.org?a=1');
+        fail('wikirest:///api/abc');
+        fail('///My%20page?foo=1');
+
+        pass('wikititle:///My%20page', 'https://domain.sec.org/wiki/My_page');
+        pass('///My%20page', 'https://domain.sec.org/wiki/My_page');
+        pass('wikititle://sec.org/My%20page', 'https://sec.org/wiki/My_page');
+        pass('//my.sec.org/My%20page', 'https://my.sec.org/wiki/My_page');
+
+        // This is not a valid title, but it will get validated on the MW side
+        pass('////My%20page', 'https://domain.sec.org/wiki/%2FMy_page');
+
+        pass('http:///wiki/Http%20page', 'https://domain.sec.org/wiki/Http_page');
+        pass('https:///wiki/Http%20page', 'https://domain.sec.org/wiki/Http_page');
+        pass('http://my.sec.org/wiki/Http%20page', 'https://my.sec.org/wiki/Http_page');
+        pass('https://my.sec.org/wiki/Http%20page', 'https://my.sec.org/wiki/Http_page');
+
+        fail('http:///Http%20page');
+        fail('https:///w/Http%20page');
+        fail('https:///wiki/Http%20page?a=1');
+    });
+
 });

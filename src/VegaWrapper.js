@@ -107,23 +107,26 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
     opt.url = opt.url.replace(/^([a-z]+:)https?:\/\//, '$1//');
 
     var decodedPathname,
+        isRelativeProtocol = /^\/\//.test(opt.url),
         urlParts = this.parseUrl(opt),
-        sanitizedHost = this.sanitizeHost(urlParts.host),
-        isRelativeProtocol = !urlParts.protocol;
+        sanitizedHost = this.sanitizeHost(urlParts.host);
 
     if (!sanitizedHost) {
         throw new Error('URL hostname is not whitelisted: ' + opt.url);
     }
     urlParts.host = sanitizedHost.host;
-    if (isRelativeProtocol) {
+    if (!urlParts.protocol) {
+        // node.js mode only - browser's url parser will always set protocol to current one
         // Update protocol-relative URLs
         urlParts.protocol = sanitizedHost.protocol;
+        isRelativeProtocol = true;
     }
 
     // Save original procotol to post-process the data
     opt.graphProtocol = urlParts.protocol;
 
     if (opt.type === 'open') {
+
         // Trim the value here because mediawiki will do it anyway, so we might as well save on redirect
         decodedPathname = decodeURIComponent(urlParts.pathname).trim();
 
@@ -157,7 +160,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 break;
 
             default:
-                throw new Error('"open()" action only allows links with wikititle protocol, e.g. wikititle:///');
+                throw new Error('"open()" action only allows links with wikititle protocol, e.g. wikititle:///My_page');
         }
     } else {
 

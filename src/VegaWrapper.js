@@ -181,6 +181,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 urlParts.query = this.objExtender(urlParts.query, {format: 'json', formatversion: '2'});
                 urlParts.pathname = '/w/api.php';
                 urlParts.protocol = sanitizedHost.protocol;
+                opt.addCorsOrigin = true;
                 break;
 
             case 'wikirest':
@@ -216,6 +217,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 };
                 urlParts.pathname = '/w/api.php';
                 urlParts.protocol = sanitizedHost.protocol;
+                opt.addCorsOrigin = true;
                 break;
 
             case 'wikifile':

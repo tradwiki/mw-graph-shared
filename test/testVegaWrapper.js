@@ -118,8 +118,13 @@ describe('vegaWrapper', function() {
 
     it('sanitizeUrl - safe', function () {
         var wraper = createWrapper(true, false),
-            pass = function (url, expected) {
-                assert.equal(wraper.sanitizeUrl({url: url, domain: 'domain.sec.org'}), expected, url)
+            pass = function (url, expected, addCorsOrigin) {
+                var opt = {url: url, domain: 'domain.sec.org'};
+                assert.equal(wraper.sanitizeUrl(opt), expected, url);
+                assert.equal(!!opt.addCorsOrigin, !!addCorsOrigin, 'addCorsOrigin');
+            },
+            passWithCors = function (url, expected) {
+                return pass(url, expected, true);
             },
             fail = function (url) {
                 expectError(function () {
@@ -135,12 +140,12 @@ describe('vegaWrapper', function() {
         fail('https://sec');
 
         // wikiapi allows sub-domains
-        pass('wikiapi://sec.org?a=1', 'https://sec.org/w/api.php?a=1&format=json&formatversion=2');
-        pass('wikiapi://wikiapi.sec.org?a=1', 'https://wikiapi.sec.org/w/api.php?a=1&format=json&formatversion=2');
-        pass('wikiapi://sec?a=1', 'https://sec.org/w/api.php?a=1&format=json&formatversion=2');
-        pass('wikiapi://nonsec.org?a=1', 'http://nonsec.org/w/api.php?a=1&format=json&formatversion=2');
-        pass('wikiapi://wikiapi.nonsec.org?a=1', 'http://wikiapi.nonsec.org/w/api.php?a=1&format=json&formatversion=2');
-        pass('wikiapi://nonsec?a=1', 'http://nonsec.org/w/api.php?a=1&format=json&formatversion=2');
+        passWithCors('wikiapi://sec.org?a=1', 'https://sec.org/w/api.php?a=1&format=json&formatversion=2');
+        passWithCors('wikiapi://wikiapi.sec.org?a=1', 'https://wikiapi.sec.org/w/api.php?a=1&format=json&formatversion=2');
+        passWithCors('wikiapi://sec?a=1', 'https://sec.org/w/api.php?a=1&format=json&formatversion=2');
+        passWithCors('wikiapi://nonsec.org?a=1', 'http://nonsec.org/w/api.php?a=1&format=json&formatversion=2');
+        passWithCors('wikiapi://wikiapi.nonsec.org?a=1', 'http://wikiapi.nonsec.org/w/api.php?a=1&format=json&formatversion=2');
+        passWithCors('wikiapi://nonsec?a=1', 'http://nonsec.org/w/api.php?a=1&format=json&formatversion=2');
 
         // wikirest allows sub-domains, requires path to begin with "/api/"
         fail('wikirest://sec.org');
@@ -157,14 +162,14 @@ describe('vegaWrapper', function() {
         fail('wikiraw://asec.org/aaa');
         fail('wikiraw:///abc|xyz');
         fail('wikiraw://sec.org/abc|xyz');
-        pass('wikiraw:///abc', 'https://domain.sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc');
-        pass('wikiraw:///abc/xyz', 'https://domain.sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc%2Fxyz');
-        pass('wikiraw://sec.org/aaa', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=aaa');
-        pass('wikiraw://sec.org/aaa?a=10', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=aaa');
-        pass('wikiraw://sec.org/abc/def', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc%2Fdef');
-        pass('wikiraw://sec/aaa', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=aaa');
-        pass('wikiraw://sec/abc/def', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc%2Fdef');
-        pass('wikiraw://wikiraw.sec.org/abc', 'https://wikiraw.sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc');
+        passWithCors('wikiraw:///abc', 'https://domain.sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc');
+        passWithCors('wikiraw:///abc/xyz', 'https://domain.sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc%2Fxyz');
+        passWithCors('wikiraw://sec.org/aaa', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=aaa');
+        passWithCors('wikiraw://sec.org/aaa?a=10', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=aaa');
+        passWithCors('wikiraw://sec.org/abc/def', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc%2Fdef');
+        passWithCors('wikiraw://sec/aaa', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=aaa');
+        passWithCors('wikiraw://sec/abc/def', 'https://sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc%2Fdef');
+        passWithCors('wikiraw://wikiraw.sec.org/abc', 'https://wikiraw.sec.org/w/api.php?format=json&formatversion=2&action=query&prop=revisions&rvprop=content&titles=abc');
 
         fail('wikirawupload://sec.org');
         fail('wikirawupload://sec.org/');

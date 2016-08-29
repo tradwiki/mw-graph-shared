@@ -84,11 +84,14 @@ describe('vegaWrapper', function() {
     };
 
     function createWrapper(useXhr, isTrusted) {
-        var load = {};
+        var datalib = {
+            extend: _.extend,
+            load: {}
+        };
         return new VegaWrapper(
-            load, useXhr, isTrusted, domains, domainMap, function (msg) {
+            datalib, useXhr, isTrusted, domains, domainMap, function (msg) {
                 throw new Error(msg);
-            }, _.extend, parseUrl, urllib.format);
+            }, parseUrl, urllib.format);
     }
 
     it('sanitizeUrl - unsafe', function () {

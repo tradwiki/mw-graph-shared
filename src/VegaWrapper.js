@@ -8,29 +8,31 @@ module.exports = VegaWrapper;
 
 /**
  * Shared library to wrap around vega code
- * @param {Object} load Vega loader object to use and override
+ * @param {Object} datalib Vega's datalib object
+ * @param {Object} datalib.load Vega's data loader
+ * @param {Function} datalib.load.loader Vega's data loader function
+ * @param {Function} datalib.extend similar to jquery's extend()
  * @param {boolean} useXhr true if we should use XHR, false for node.js http loading
  * @param {boolean} isTrusted true if the graph spec can be trusted
  * @param {Object} domains allowed protocols and a list of their domains
  * @param {Object} domainMap domain remapping
  * @param {Function} logger
- * @param {Function} objExtender $.extend in browser, _.extend in NodeJs
  * @param {Function} parseUrl
  * @param {Function} formatUrl
  * @constructor
  */
-function VegaWrapper(load, useXhr, isTrusted, domains, domainMap, logger, objExtender, parseUrl, formatUrl) {
+function VegaWrapper(datalib, useXhr, isTrusted, domains, domainMap, logger, parseUrl, formatUrl) {
     var self = this;
     self.isTrusted = isTrusted;
     self.domains = domains;
     self.domainMap = domainMap;
     self.logger = logger;
-    self.objExtender = objExtender;
+    self.objExtender = datalib.extend;
     self.parseUrl = parseUrl;
     self.formatUrl = formatUrl;
     self.validators = {};
 
-    load.loader = function (opt, callback) {
+    datalib.load.loader = function (opt, callback) {
         var error = callback || function (e) { throw e; }, url;
 
         try {
@@ -46,20 +48,20 @@ function VegaWrapper(load, useXhr, isTrusted, domains, domainMap, logger, objExt
         };
 
         if (useXhr) {
-            return load.xhr(url, opt, cb);
+            return datalib.load.xhr(url, opt, cb);
         } else {
-            return load.http(url, opt, cb);
+            return datalib.load.http(url, opt, cb);
         }
     };
 
-    load.sanitizeUrl = self.sanitizeUrl.bind(self);
+    datalib.load.sanitizeUrl = self.sanitizeUrl.bind(self);
 
     // Prevent accidental use
-    load.file = function() { throw new Error('Disabled'); };
+    datalib.load.file = function() { throw new Error('Disabled'); };
     if (useXhr) {
-        load.http = load.file;
+        datalib.load.http = datalib.load.file;
     } else {
-        load.xhr = load.file;
+        datalib.load.xhr = datalib.load.file;
     }
 }
 

@@ -74,10 +74,10 @@ VegaWrapper.prototype.sanitizeHost = function sanitizeHost(host) {
     // First, map the host
     host = (this.domainMap && this.domainMap[host]) || host;
 
-    if (this.testHost('https', host)) {
-        return {host: host, protocol: 'https'};
-    } else if (this.testHost('http', host)) {
-        return {host: host, protocol: 'http'};
+    if (this.testHost('https:', host)) {
+        return {host: host, protocol: 'https:'};
+    } else if (this.testHost('http:', host)) {
+        return {host: host, protocol: 'http:'};
     }
     return undefined;
 };
@@ -90,13 +90,27 @@ VegaWrapper.prototype.sanitizeHost = function sanitizeHost(host) {
  */
 VegaWrapper.prototype.testHost = function testHost(protocol, host) {
     if (!this.validators[protocol]) {
-        if (this.domains[protocol]) {
-            this.validators[protocol] = makeValidator(this.domains[protocol], protocol === 'https' || protocol === 'http');
+        var domains = this._getProtocolDomains(protocol);
+        if (domains) {
+            this.validators[protocol] = makeValidator(domains, protocol === 'https:' || protocol === 'http:');
         } else {
             return false;
         }
     }
     return this.validators[protocol].test(host);
+};
+
+/**
+ * Gets allowed domains for a given protocol.  Assumes protocol ends with a ':'.
+ * Handles if this.domains's keys do not end in the ':'.
+ * @param {string} protocol
+ * @return {[]|false}
+ * @private
+ */
+VegaWrapper.prototype._getProtocolDomains = function _getProtocolDomains(protocol) {
+    return this.domains[protocol] ||
+        (protocol && protocol.length && protocol[protocol.length - 1] === ':'
+        && this.domains[protocol.substring(0, protocol.length - 1)]);
 };
 
 /**this
@@ -133,8 +147,8 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
         decodedPathname = decodeURIComponent(urlParts.pathname).trim();
 
         switch (urlParts.protocol) {
-            case 'http':
-            case 'https':
+            case 'http:':
+            case 'https:':
                 // The default protocol for the open action is wikititle, so if isRelativeProtocol is set,
                 // we treat the whole pathname as title (without the '/' prefix).
                 if (!isRelativeProtocol) {
@@ -147,7 +161,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 opt.graphProtocol = 'wikititle';
                 // fall-through
 
-            case 'wikititle':
+            case 'wikititle:':
                 // wikititle:///My_page   or   wikititle://en.wikipedia.org/My_page
                 // open() at this point may only be used to link to a Wiki page, as it may be invoked
                 // without a click, thus potentially causing a privacy issue.
@@ -167,8 +181,8 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
     } else {
 
         switch (urlParts.protocol) {
-            case 'http':
-            case 'https':
+            case 'http:':
+            case 'https:':
                 if (!this.isTrusted) {
                     throw new Error('HTTP and HTTPS protocols are not supported for untrusted graphs.\n' +
                         'Use wikiraw:, wikiapi:, wikirest:, wikirawupload:, and other protocols.\n' +
@@ -177,7 +191,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 // keep the original URL
                 break;
 
-            case 'wikiapi':
+            case 'wikiapi:':
                 // wikiapi:///?action=query&list=allpages
                 // Call to api.php - ignores the path parameter, and only uses the query
                 urlParts.query = this.objExtender(urlParts.query, {format: 'json', formatversion: '2'});
@@ -186,7 +200,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 opt.addCorsOrigin = true;
                 break;
 
-            case 'wikirest':
+            case 'wikirest:':
                 // wikirest:///api/rest_v1/page/...
                 // Call to RESTbase api - requires the path to start with "/api/"
                 // The /api/... path is safe for GET requests
@@ -198,7 +212,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 urlParts.protocol = sanitizedHost.protocol;
                 break;
 
-            case 'wikiraw':
+            case 'wikiraw:':
                 // wikiraw:///MyPage/data
                 // Get raw content of a wiki page, where the path is the title
                 // of the page with an additional leading '/' which gets removed.
@@ -222,7 +236,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 opt.addCorsOrigin = true;
                 break;
 
-            case 'wikifile':
+            case 'wikifile:':
                 // wikifile:///Einstein_1921.jpg
                 // Get an image for the graph, e.g. from commons, by using Special:Redirect
                 urlParts.pathname = '/wiki/Special:Redirect/file' + urlParts.pathname;
@@ -230,7 +244,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 // keep urlParts.query
                 break;
 
-            case 'wikirawupload':
+            case 'wikirawupload:':
                 // wikirawupload://upload.wikimedia.org/wikipedia/commons/3/3e/Einstein_1921.jpg
                 // Get an image for the graph, e.g. from commons
                 // This tag specifies any content from the uploads.* domain, without query params
@@ -239,7 +253,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 // keep urlParts.pathname
                 break;
 
-            case 'wikidatasparql':
+            case 'wikidatasparql:':
                 // wikidatasparql:///?query=<QUERY>
                 // Runs a SPARQL query, converting it to
                 // https://query.wikidata.org/bigdata/namespace/wdq/sparql?format=json&query=...
@@ -250,10 +264,10 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 // Only keep the "query" parameter
                 urlParts.query = {query: urlParts.query.query};
                 urlParts.pathname = '/bigdata/namespace/wdq/sparql';
-                opt.headers = vg.util.extend(opt.headers || {}, { 'Accept': 'application/sparql-results+json' });
+                opt.headers = this.objExtender(opt.headers || {}, { 'Accept': 'application/sparql-results+json' });
                 break;
 
-            case 'geoshape':
+            case 'geoshape:':
                 // geoshape:///?ids=Q16,Q30
                 // Get geo shapes data from OSM database by supplying Wikidata IDs
                 // https://maps.wikimedia.org/shape?ids=Q16,Q30
@@ -274,12 +288,13 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
 };
 
 VegaWrapper.prototype._validateExternalService = function _validateExternalService(urlParts, sanitizedHost, url) {
-    var protocol = urlParts.protocol;
-    if (!this.domains[protocol]) {
+    var protocol = urlParts.protocol,
+        domains = this._getProtocolDomains(protocol);
+    if (!domains) {
         throw new Error(protocol + ': protocol is disabled: ' + url);
     }
     if (urlParts.isRelativeHost) {
-        urlParts.host = this.domains[protocol][0];
+        urlParts.host = domains[0];
         urlParts.protocol = this.sanitizeHost(urlParts.host).protocol;
     } else {
         urlParts.protocol = sanitizedHost.protocol;
@@ -298,8 +313,8 @@ VegaWrapper.prototype.dataParser = function dataParser(error, data, opt, callbac
         return;
     }
     switch (opt.graphProtocol) {
-        case 'wikiapi':
-        case 'wikiraw':
+        case 'wikiapi:':
+        case 'wikiraw:':
             // This was an API call - check for errors
             data = JSON.parse(data);
             if (data.error) {
@@ -320,7 +335,7 @@ VegaWrapper.prototype.dataParser = function dataParser(error, data, opt, callbac
             }
             break;
 
-        case 'wikidatasparql':
+        case 'wikidatasparql:':
             data = JSON.parse(data);
             if (!data.results || !Array.isArray(data.results.bindings)) {
                 throw new Error('SPARQL query result does not have "results.bindings"');

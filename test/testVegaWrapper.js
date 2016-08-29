@@ -24,8 +24,6 @@ describe('vegaWrapper', function() {
         var urlParts = urllib.parse(url, true);
         if (isRelativeUrl) {
             delete urlParts.protocol;
-        } else if (urlParts.protocol && urlParts.protocol[urlParts.protocol.length - 1] === ':') {
-            urlParts.protocol = urlParts.protocol.substring(0, urlParts.protocol.length - 1);
         }
         // reduce confusion, only keep expected values
         delete urlParts.hostname;
@@ -197,8 +195,8 @@ describe('vegaWrapper', function() {
         fail('wikidatasparql://asec.org/aaa');
         fail('wikidatasparql:///aaa');
         fail('wikidatasparql:///?aquery=1');
-        pass('wikidatasparql:///?query=1', 'http://wikidatasparql.nonsec.org/bigdata/namespace/wdq/sparql?format=json&query=1');
-        pass('wikidatasparql://wikidatasparql.sec.org/?query=1', 'https://wikidatasparql.sec.org/bigdata/namespace/wdq/sparql?format=json&query=1');
+        pass('wikidatasparql:///?query=1', 'http://wikidatasparql.nonsec.org/bigdata/namespace/wdq/sparql?query=1');
+        pass('wikidatasparql://wikidatasparql.sec.org/?query=1', 'https://wikidatasparql.sec.org/bigdata/namespace/wdq/sparql?query=1');
 
         fail('geoshape://sec.org');
         fail('geoshape://sec.org/');

@@ -57,11 +57,11 @@ function VegaWrapper(datalib, useXhr, isTrusted, domains, domainMap, logger, par
     datalib.load.sanitizeUrl = self.sanitizeUrl.bind(self);
 
     // Prevent accidental use
-    datalib.load.file = function() { throw new Error('Disabled'); };
+    datalib.load.file = alwaysFail;
     if (useXhr) {
-        datalib.load.http = datalib.load.file;
+        datalib.load.http = alwaysFail;
     } else {
-        datalib.load.xhr = datalib.load.file;
+        datalib.load.xhr = alwaysFail;
     }
 }
 
@@ -353,3 +353,10 @@ VegaWrapper.prototype.dataParser = function dataParser(error, data, opt, callbac
     }
     callback(error, data);
 };
+
+/**
+ * Throw an error when called
+ */
+function alwaysFail() {
+    throw new Error('Disabled');
+}

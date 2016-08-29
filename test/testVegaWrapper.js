@@ -197,6 +197,7 @@ describe('vegaWrapper', function() {
         fail('wikidatasparql:///?aquery=1');
         pass('wikidatasparql:///?query=1', 'http://wikidatasparql.nonsec.org/bigdata/namespace/wdq/sparql?query=1');
         pass('wikidatasparql://wikidatasparql.sec.org/?query=1', 'https://wikidatasparql.sec.org/bigdata/namespace/wdq/sparql?query=1');
+        pass('wikidatasparql://wikidatasparql.sec.org/?query=1&blah=2', 'https://wikidatasparql.sec.org/bigdata/namespace/wdq/sparql?query=1');
 
         fail('geoshape://sec.org');
         fail('geoshape://sec.org/');

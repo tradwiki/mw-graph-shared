@@ -247,8 +247,10 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 if (!urlParts.query || !urlParts.query.query) {
                     throw new Error('wikidatasparql: missing query parameter in: ' + opt.url);
                 }
-                urlParts.query = {format: 'json', query: urlParts.query.query};
+                // Only keep the "query" parameter
+                urlParts.query = {query: urlParts.query.query};
                 urlParts.pathname = '/bigdata/namespace/wdq/sparql';
+                opt.headers = vg.util.extend(opt.headers || {}, { 'Accept': 'application/sparql-results+json' });
                 break;
 
             case 'geoshape':

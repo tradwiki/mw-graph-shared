@@ -93,13 +93,13 @@ describe('vegaWrapper', function() {
     }
 
     it('sanitizeUrl - unsafe', function () {
-        var wraper = createWrapper(true, true),
+        var wrapper = createWrapper(true, true),
             pass = function (url, expected) {
-                assert.equal(wraper.sanitizeUrl({url: url, domain: 'domain.sec.org'}), expected, url)
+                assert.equal(wrapper.sanitizeUrl({url: url, domain: 'domain.sec.org'}), expected, url)
             },
             fail = function (url) {
                 expectError(function () {
-                    return wraper.sanitizeUrl({url: url, domain: 'domain.sec.org'});
+                    return wrapper.sanitizeUrl({url: url, domain: 'domain.sec.org'});
                 }, url, ['VegaWrapper.sanitizeUrl']);
             };
 
@@ -118,10 +118,10 @@ describe('vegaWrapper', function() {
     });
 
     it('sanitizeUrl - safe', function () {
-        var wraper = createWrapper(true, false),
+        var wrapper = createWrapper(true, false),
             pass = function (url, expected, addCorsOrigin) {
                 var opt = {url: url, domain: 'domain.sec.org'};
-                assert.equal(wraper.sanitizeUrl(opt), expected, url);
+                assert.equal(wrapper.sanitizeUrl(opt), expected, url);
                 assert.equal(!!opt.addCorsOrigin, !!addCorsOrigin, 'addCorsOrigin');
             },
             passWithCors = function (url, expected) {
@@ -129,7 +129,7 @@ describe('vegaWrapper', function() {
             },
             fail = function (url) {
                 expectError(function () {
-                    return wraper.sanitizeUrl({url: url, domain: 'domain.sec.org'});
+                    return wrapper.sanitizeUrl({url: url, domain: 'domain.sec.org'});
                 }, url, ['VegaWrapper.sanitizeUrl', 'VegaWrapper._validateExternalService']);
             };
 
@@ -217,13 +217,13 @@ describe('vegaWrapper', function() {
     });
 
     it('sanitizeUrl for type=open', function () {
-        var wraper = createWrapper(true, false),
+        var wrapper = createWrapper(true, false),
             pass = function (url, expected) {
-                assert.equal(wraper.sanitizeUrl({url: url, type: 'open', domain: 'domain.sec.org'}), expected, url)
+                assert.equal(wrapper.sanitizeUrl({url: url, type: 'open', domain: 'domain.sec.org'}), expected, url)
             },
             fail = function (url) {
                 expectError(function () {
-                    return wraper.sanitizeUrl({url: url, type: 'open', domain: 'domain.sec.org'});
+                    return wrapper.sanitizeUrl({url: url, type: 'open', domain: 'domain.sec.org'});
                 }, url, ['VegaWrapper.sanitizeUrl', 'VegaWrapper._validateExternalService']);
             };
 
@@ -247,6 +247,67 @@ describe('vegaWrapper', function() {
         fail('http:///Http%20page');
         fail('https:///w/Http%20page');
         fail('https:///wiki/Http%20page?a=1');
+    });
+
+    it('dateParser', function () {
+        var wrapper = createWrapper(),
+            pass = function (expected, data, graphProtocol, dontEncode) {
+                assert.deepStrictEqual(
+                    wrapper.parseDataOrThrow(
+                        dontEncode ? data : JSON.stringify(data),
+                        {graphProtocol: graphProtocol}),
+                    expected, graphProtocol)
+            },
+            fail = function (data, graphProtocol) {
+                expectError(function () {
+                    return wrapper.parseDataOrThrow(
+                        dontEncode ? data : JSON.stringify(data),
+                        {graphProtocol: graphProtocol});
+                }, graphProtocol, ['VegaWrapper.parseDataOrThrow']);
+            };
+
+        fail(undefined, undefined, new Error());
+
+        pass(1, 1, 'test:', true);
+
+        fail({error: 'blah'}, 'wikiapi:');
+        pass({blah: 1}, {blah: 1}, 'wikiapi:');
+
+        fail({error: 'blah'}, 'wikiraw:');
+        fail({blah: 1}, 'wikiraw:');
+        pass('blah', {query: {pages: [{revisions: [{content: 'blah'}]}]}}, 'wikiraw:');
+
+        fail({error: 'blah'}, 'wikidatasparql:');
+        fail({blah: 1}, 'wikidatasparql:');
+        fail({results: false}, 'wikidatasparql:');
+        fail({results: {bindings: false}}, 'wikidatasparql:');
+        pass([], {results: {bindings: []}}, 'wikidatasparql:');
+        pass([{int: 42, float: 42.5, geo: [42, 144.5]}, {uri: 'Q42'}], {
+            results: {
+                bindings: [{
+                    int: {
+                        type: 'literal',
+                        'datatype': 'http://www.w3.org/2001/XMLSchema#int',
+                        value: '42'
+                    },
+                    float: {
+                        type: 'literal',
+                        'datatype': 'http://www.w3.org/2001/XMLSchema#float',
+                        value: '42.5'
+                    },
+                    geo: {
+                        type: 'literal',
+                        'datatype': 'http://www.opengis.net/ont/geosparql#wktLiteral',
+                        value: 'Point(42 144.5)'
+                    }
+                }, {
+                    uri: {
+                        type: 'uri',
+                        value: 'http://www.wikidata.org/entity/Q42'
+                    }
+                }]
+            }
+        }, 'wikidatasparql:');
     });
 
 });

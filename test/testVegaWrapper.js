@@ -208,12 +208,18 @@ describe('vegaWrapper', function() {
         fail('geoshape://asec.org/aaa');
         fail('geoshape:///aaa');
         fail('geoshape:///?aquery=1');
-        pass('geoshape:///?ids=1', 'http://geoshape.nonsec.org/shape?ids=1');
-        pass('geoshape://geoshape.sec.org/?ids=a1,b4', 'https://geoshape.sec.org/shape?ids=a1%2Cb4');
+        pass('geoshape:///?ids=1', 'http://geoshape.nonsec.org/geoshape?ids=1');
+        pass('geoshape://geoshape.sec.org/?ids=a1,b4', 'https://geoshape.sec.org/geoshape?ids=a1%2Cb4');
 
         pass('wikifile:///Einstein_1921.jpg', 'https://domain.sec.org/wiki/Special:Redirect/file/Einstein_1921.jpg');
         pass('wikifile:///Einstein_1921.jpg?width=10', 'https://domain.sec.org/wiki/Special:Redirect/file/Einstein_1921.jpg?width=10');
         pass('wikifile://sec.org/Einstein_1921.jpg', 'https://sec.org/wiki/Special:Redirect/file/Einstein_1921.jpg');
+
+        fail('mapsnapshot://sec.org');
+        fail('mapsnapshot://sec.org/');
+        fail('mapsnapshot:///?width=100');
+        fail('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5&style=@4');
+        pass('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5', 'http://geoshape.nonsec.org/img/osm-intl,5,10,10,100x100@2x.png');
     });
 
     it('sanitizeUrl for type=open', function () {

@@ -74,7 +74,7 @@ describe('vegaWrapper', function() {
         wikiraw: ['wikiraw.nonsec.org', 'wikiraw.sec.org'],
         wikirawupload: ['wikirawupload.nonsec.org', 'wikirawupload.sec.org'],
         wikidatasparql: ['wikidatasparql.nonsec.org', 'wikidatasparql.sec.org'],
-        geoshape: ['geoshape.nonsec.org', 'geoshape.sec.org']
+        geoshape: ['maps.nonsec.org', 'maps.sec.org']
     };
     var domainMap = {
         'nonsec': 'nonsec.org',
@@ -208,8 +208,20 @@ describe('vegaWrapper', function() {
         fail('geoshape://asec.org/aaa');
         fail('geoshape:///aaa');
         fail('geoshape:///?aquery=1');
-        pass('geoshape:///?ids=1', 'http://geoshape.nonsec.org/geoshape?ids=1');
-        pass('geoshape://geoshape.sec.org/?ids=a1,b4', 'https://geoshape.sec.org/geoshape?ids=a1%2Cb4');
+        pass('geoshape:///?ids=1', 'http://maps.nonsec.org/geoshape?ids=1');
+        pass('geoshape://maps.sec.org/?ids=a1,b4', 'https://maps.sec.org/geoshape?ids=a1%2Cb4');
+
+        fail('geoline://sec.org');
+        fail('geoline://sec.org/');
+        fail('geoline://sec.org/a');
+        fail('geoline://sec.org/?a=10');
+        fail('geoline://asec.org/aaa');
+        fail('geoline://asec.org/aaa');
+        fail('geoline://asec.org/aaa');
+        fail('geoline:///aaa');
+        fail('geoline:///?aquery=1');
+        pass('geoline:///?ids=1', 'http://maps.nonsec.org/geoline?ids=1');
+        pass('geoline://maps.sec.org/?ids=a1,b4', 'https://maps.sec.org/geoline?ids=a1%2Cb4');
 
         pass('wikifile:///Einstein_1921.jpg', 'https://domain.sec.org/wiki/Special:Redirect/file/Einstein_1921.jpg');
         pass('wikifile:///Einstein_1921.jpg?width=10', 'https://domain.sec.org/wiki/Special:Redirect/file/Einstein_1921.jpg?width=10');
@@ -219,7 +231,7 @@ describe('vegaWrapper', function() {
         fail('mapsnapshot://sec.org/');
         fail('mapsnapshot:///?width=100');
         fail('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5&style=@4');
-        pass('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5', 'http://geoshape.nonsec.org/img/osm-intl,5,10,10,100x100@2x.png');
+        pass('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5', 'http://maps.nonsec.org/img/osm-intl,5,10,10,100x100@2x.png');
     });
 
     it('sanitizeUrl for type=open', function () {

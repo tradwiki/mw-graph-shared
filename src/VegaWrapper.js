@@ -216,13 +216,12 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 break;
 
             case 'wikiraw:':
-            case 'wikitabular:':
                 // wikiraw:///MyPage/data
                 // Get raw content of a wiki page, where the path is the title
                 // of the page with an additional leading '/' which gets removed.
                 // Uses mediawiki api, and extract the content after the request
                 // Query value must be a valid MediaWiki title string, but we only ensure
-                // there is no pipe symbol, the rest is handlered by the api.
+                // there is no pipe symbol, the rest is handled by the api.
                 decodedPathname = decodeURIComponent(urlParts.pathname);
                 if (!/^\/[^|]+$/.test(decodedPathname)) {
                     throw new Error('wikiraw: invalid title');
@@ -238,6 +237,30 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 urlParts.pathname = '/w/api.php';
                 urlParts.protocol = sanitizedHost.protocol;
                 opt.addCorsOrigin = true;
+                break;
+
+            case 'tabular:':
+            case 'tabularinfo:':
+                // tabular:///MyPage/data
+                // Get content of a tabular (JSON) page from Commons,
+                // where the path is the title of the page with an additional
+                // leading '/' which gets removed.
+                // Uses jsondata api, and extract the content after the request
+                // Query value must be a valid MediaWiki title string, but we only ensure
+                // there is no pipe symbol, the rest is handled by the api.
+                decodedPathname = decodeURIComponent(urlParts.pathname);
+                if (!/^\/[^|]+$/.test(decodedPathname)) {
+                    throw new Error(urlParts.protocol + ': invalid title');
+                }
+                urlParts.query = {
+                    format: 'json',
+                    formatversion: '2',
+                    action: 'jsondata',
+                    title: decodedPathname.substring(1)
+                };
+                urlParts.pathname = '/w/api.php';
+                opt.addCorsOrigin = true;
+                this._validateExternalService(urlParts, sanitizedHost, opt.url, 'tabular:');
                 break;
 
             case 'wikifile:':
@@ -382,6 +405,7 @@ VegaWrapper.prototype.parseMWApiResponse = function parseMWApiResponse(data) {
  * Performs post-processing of the data requested by the graph's spec, and throw on error
  */
 VegaWrapper.prototype.parseDataOrThrow = function parseDataOrThrow(data, opt) {
+    var result;
     switch (opt.graphProtocol) {
         case 'wikiapi:':
             data = this.parseMWApiResponse(data);
@@ -394,12 +418,12 @@ VegaWrapper.prototype.parseDataOrThrow = function parseDataOrThrow(data, opt) {
                 throw new Error('Page content not available ' + opt.url);
             }
             break;
-        case 'wikitabular:':
+        case 'tabular:':
             data = this.parseMWApiResponse(data);
             if (!Array.isArray(data.rows)) {
                 throw new Error('page is not a valid tabular data');
             }
-            var result = [];
+            result = [];
             data.rows.forEach(function(v) {
                 var row = {};
                 for (var i = 0; i < data.headers.length; i++) {
@@ -407,6 +431,21 @@ VegaWrapper.prototype.parseDataOrThrow = function parseDataOrThrow(data, opt) {
                 }
                 result.push(row);
             });
+            data = result;
+            break;
+        case 'tabularinfo:':
+            data = this.parseMWApiResponse(data);
+            result = {
+                license: data.license,
+                info: data.info,
+                types: {},
+                titles: {},
+                count: data.rows ? data.rows.length : 0
+            };
+            for (var i = 0; i < data.headers.length; i++) {
+                result.types[data.headers[i]] = data.types[i];
+                result.titles[data.headers[i]] = data.titles[i];
+            }
             data = result;
             break;
         case 'wikidatasparql:':

@@ -86,10 +86,17 @@ describe('vegaWrapper', function() {
             extend: _.extend,
             load: {}
         };
-        return new VegaWrapper(
-            datalib, useXhr, isTrusted, domains, domainMap, function (msg) {
-                throw new Error(msg);
-            }, parseUrl, urllib.format);
+        return new VegaWrapper({
+            datalib: datalib,
+            useXhr: useXhr,
+            isTrusted: isTrusted,
+            domains: domains,
+            domainMap: domainMap,
+            logger: function (msg) { throw new Error(msg); },
+            parseUrl: parseUrl,
+            formatUrl: urllib.format,
+            languageCode: 'en'
+        });
     }
 
     it('sanitizeUrl - unsafe', function () {
@@ -122,7 +129,7 @@ describe('vegaWrapper', function() {
             pass = function (url, expected, addCorsOrigin) {
                 var opt = {url: url, domain: 'domain.sec.org'};
                 assert.equal(wrapper.sanitizeUrl(opt), expected, url);
-                assert.equal(!!opt.addCorsOrigin, !!addCorsOrigin, 'addCorsOrigin');
+                assert.equal(opt.addCorsOrigin, addCorsOrigin, 'addCorsOrigin');
             },
             passWithCors = function (url, expected) {
                 return pass(url, expected, true);
@@ -232,6 +239,21 @@ describe('vegaWrapper', function() {
         fail('mapsnapshot:///?width=100');
         fail('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5&style=@4');
         pass('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5', 'http://maps.nonsec.org/img/osm-intl,5,10,10,100x100@2x.png');
+
+        fail('tabular://sec.org');
+        fail('tabular://sec.org/');
+        fail('tabular://sec.org/?a=10');
+        fail('tabular://asec.org/aaa');
+        fail('tabular:///abc|xyz');
+        fail('tabular://sec.org/abc|xyz');
+        passWithCors('tabular:///abc', 'https://domain.sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc&uselang=en');
+        passWithCors('tabular:///abc/xyz', 'https://domain.sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc%2Fxyz&uselang=en');
+        passWithCors('tabular://sec.org/aaa', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=aaa&uselang=en');
+        passWithCors('tabular://sec.org/aaa?a=10', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=aaa&uselang=en');
+        passWithCors('tabular://sec.org/abc/def', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc%2Fdef&uselang=en');
+        passWithCors('tabular://sec/aaa', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=aaa&uselang=en');
+        passWithCors('tabular://sec/abc/def', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc%2Fdef&uselang=en');
+        passWithCors('tabular://wikiraw.sec.org/abc', 'https://wikiraw.sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc&uselang=en');
     });
 
     it('sanitizeUrl for type=open', function () {

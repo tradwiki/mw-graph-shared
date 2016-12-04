@@ -221,7 +221,6 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
 
             case 'wikiraw:':
             case 'tabular:':
-            case 'tabularinfo:':
                 // wikiraw:///MyPage/data
                 // Get content of a wiki page, where the path is the title
                 // of the page with an additional leading '/' which gets removed.
@@ -308,20 +307,23 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 // Converts it into a snapshot image request for Kartotherian:
                 // https://maps.wikimedia.org/img/{style},{zoom},{lat},{lon},{width}x{height}[@{scale}x].{format}
                 // (scale will be set to 2, and format to png)
-                // Uses the same configuration as geoshape service, so reuse settings
-                this._validateExternalService(urlParts, sanitizedHost, opt.url, 'geoshape:');
                 if (!urlParts.query) {
                     throw new Error('mapsnapshot: missing required parameters');
                 }
+                validate(urlParts, 'width', 1, 4096);
+                validate(urlParts, 'height', 1, 4096);
+                validate(urlParts, 'zoom', 0, 22);
+                validate(urlParts, 'lat', -90, 90, true);
+                validate(urlParts, 'lon', -180, 180, true);
+
                 var query = urlParts.query;
-                validate(query, 'width', 1, 4096);
-                validate(query, 'height', 1, 4096);
-                validate(query, 'zoom', 0, 22);
-                validate(query, 'lat', -90, 90, true);
-                validate(query, 'lon', -180, 180, true);
                 if (query.style && !/^[-_0-9a-z]$/.test(query.style)) {
                     throw new Error('mapsnapshot: if style is given, it must be letters/numbers/dash/underscores only');
                 }
+
+                // Uses the same configuration as geoshape service, so reuse settings
+                this._validateExternalService(urlParts, sanitizedHost, opt.url, 'geoshape:');
+
                 urlParts.pathname = '/img/' + (query.style || 'osm-intl') + ',' + query.zoom + ',' +
                     query.lat + ',' + query.lon + ',' + query.width + 'x' + query.height + '@2x.png';
                 urlParts.query = {}; // deleting it would cause errors in mw.Uri()
@@ -335,19 +337,18 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
     return this.formatUrl(urlParts, opt);
 };
 
-function validate(obj, name, min, max, isFloat) {
-    if (!obj.hasOwnProperty(name)) {
-        throw new Error('mapsnapshot: parameter ' + name + ' is not set');
+function validate(urlParts, name, min, max, isFloat) {
+    var value = urlParts.query[name];
+    if (value === undefined) {
+        throw new Error(urlParts.protocol + ' parameter ' + name + ' is not set');
     }
-    var value = obj[name];
     if (!(isFloat ? /^-?[0-9]+\.?[0-9]*$/ : /^-?[0-9]+$/).test(value)) {
-        throw new Error('mapsnapshot: parameter ' + name + ' is not a number');
+        throw new Error(urlParts.protocol + ' parameter ' + name + ' is not a number');
     }
     value = isFloat ? parseFloat(value) : parseInt(value);
     if (value < min || value > max) {
-        throw new Error('mapsnapshot: parameter ' + name + ' is not valid');
+        throw new Error(urlParts.protocol + ' parameter ' + name + ' is not valid');
     }
-    return value;
 }
 
 VegaWrapper.prototype._validateExternalService = function _validateExternalService(urlParts, sanitizedHost, url, protocolOverride) {

@@ -5,34 +5,43 @@ var makeValidator = require('domain-validator'),
     parseWikidataValue = require('wd-type-parser');
 
 module.exports = VegaWrapper;
+module.exports.removeColon = removeColon;
+
+/**
+ * Utility function to remove trailing colon from a protocol
+ * @param {string} protocol
+ * @return {string}
+ */
+function removeColon(protocol) {
+    return protocol && protocol.length && protocol[protocol.length - 1] === ':'
+        ? protocol.substring(0, protocol.length - 1) : protocol;
+}
 
 /**
  * Shared library to wrap around vega code
- * @param {Object} datalib Vega's datalib object
- * @param {Object} datalib.load Vega's data loader
- * @param {Function} datalib.load.loader Vega's data loader function
- * @param {Function} datalib.extend similar to jquery's extend()
- * @param {boolean} useXhr true if we should use XHR, false for node.js http loading
- * @param {boolean} isTrusted true if the graph spec can be trusted
- * @param {Object} domains allowed protocols and a list of their domains
- * @param {Object} domainMap domain remapping
- * @param {Function} logger
- * @param {Function} parseUrl
- * @param {Function} formatUrl
+ * @param {Object} wrapperOpts Configuration options
+ * @param {Object} wrapperOpts.datalib Vega's datalib object
+ * @param {Object} wrapperOpts.datalib.load Vega's data loader
+ * @param {Function} wrapperOpts.datalib.load.loader Vega's data loader function
+ * @param {Function} wrapperOpts.datalib.extend similar to jquery's extend()
+ * @param {boolean} wrapperOpts.useXhr true if we should use XHR, false for node.js http loading
+ * @param {boolean} wrapperOpts.isTrusted true if the graph spec can be trusted
+ * @param {Object} wrapperOpts.domains allowed protocols and a list of their domains
+ * @param {Object} wrapperOpts.domainMap domain remapping
+ * @param {Function} wrapperOpts.logger
+ * @param {Function} wrapperOpts.parseUrl
+ * @param {Function} wrapperOpts.formatUrl
+ * @param {string} [wrapperOpts.languageCode]
  * @constructor
  */
-function VegaWrapper(datalib, useXhr, isTrusted, domains, domainMap, logger, parseUrl, formatUrl) {
+function VegaWrapper(wrapperOpts) {
     var self = this;
-    self.isTrusted = isTrusted;
-    self.domains = domains;
-    self.domainMap = domainMap;
-    self.logger = logger;
-    self.objExtender = datalib.extend;
-    self.parseUrl = parseUrl;
-    self.formatUrl = formatUrl;
+    // Copy all options into this object
+    self.objExtender = wrapperOpts.datalib.extend;
+    self.objExtender(self, wrapperOpts);
     self.validators = {};
 
-    datalib.load.loader = function (opt, callback) {
+    self.datalib.load.loader = function (opt, callback) {
         var error = callback || function (e) { throw e; }, url;
 
         try {
@@ -47,21 +56,21 @@ function VegaWrapper(datalib, useXhr, isTrusted, domains, domainMap, logger, par
             return self.dataParser(error, data, opt, callback);
         };
 
-        if (useXhr) {
-            return datalib.load.xhr(url, opt, cb);
+        if (self.useXhr) {
+            return self.datalib.load.xhr(url, opt, cb);
         } else {
-            return datalib.load.http(url, opt, cb);
+            return self.datalib.load.http(url, opt, cb);
         }
     };
 
-    datalib.load.sanitizeUrl = self.sanitizeUrl.bind(self);
+    self.datalib.load.sanitizeUrl = self.sanitizeUrl.bind(self);
 
     // Prevent accidental use
-    datalib.load.file = alwaysFail;
-    if (useXhr) {
-        datalib.load.http = alwaysFail;
+    self.datalib.load.file = alwaysFail;
+    if (self.useXhr) {
+        self.datalib.load.http = alwaysFail;
     } else {
-        datalib.load.xhr = alwaysFail;
+        self.datalib.load.xhr = alwaysFail;
     }
 }
 
@@ -108,15 +117,10 @@ VegaWrapper.prototype.testHost = function testHost(protocol, host) {
  * @private
  */
 VegaWrapper.prototype._getProtocolDomains = function _getProtocolDomains(protocol) {
-    return this.domains[protocol] || this.domains[this.removeColon(protocol)];
+    return this.domains[protocol] || this.domains[removeColon(protocol)];
 };
 
-VegaWrapper.prototype.removeColon = function removeColon(protocol) {
-    return protocol && protocol.length && protocol[protocol.length - 1] === ':'
-    ? protocol.substring(0, protocol.length - 1) : protocol;
-}
-
-/**this
+/**
  * Validate and update urlObj to be safe for client-side and server-side usage
  * @param {Object} opt passed by the vega loader, and will add 'graphProtocol' param
  * @returns {boolean} true on success
@@ -216,24 +220,39 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 break;
 
             case 'wikiraw:':
+            case 'tabular:':
+            case 'tabularinfo:':
                 // wikiraw:///MyPage/data
-                // Get raw content of a wiki page, where the path is the title
+                // Get content of a wiki page, where the path is the title
                 // of the page with an additional leading '/' which gets removed.
                 // Uses mediawiki api, and extract the content after the request
                 // Query value must be a valid MediaWiki title string, but we only ensure
-                // there is no pipe symbol, the rest is handlered by the api.
+                // there is no pipe symbol, the rest is handled by the api.
                 decodedPathname = decodeURIComponent(urlParts.pathname);
                 if (!/^\/[^|]+$/.test(decodedPathname)) {
-                    throw new Error('wikiraw: invalid title');
+                    throw new Error(urlParts.protocol + ' invalid title');
                 }
-                urlParts.query = {
-                    format: 'json',
-                    formatversion: '2',
-                    action: 'query',
-                    prop: 'revisions',
-                    rvprop: 'content',
-                    titles: decodedPathname.substring(1)
-                };
+                if (urlParts.protocol === 'wikiraw:') {
+                    urlParts.query = {
+                        format: 'json',
+                        formatversion: '2',
+                        action: 'query',
+                        prop: 'revisions',
+                        rvprop: 'content',
+                        titles: decodedPathname.substring(1)
+                    };
+                } else {
+                    urlParts.query = {
+                        format: 'json',
+                        formatversion: '2',
+                        action: 'jsondata',
+                        title: decodedPathname.substring(1)
+                    };
+                    if (this.languageCode) {
+                        urlParts.query.uselang = this.languageCode;
+                    }
+                }
+
                 urlParts.pathname = '/w/api.php';
                 urlParts.protocol = sanitizedHost.protocol;
                 opt.addCorsOrigin = true;
@@ -281,7 +300,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                     throw new Error(opt.graphProtocol + ' missing ids or query parameter in: ' + opt.url);
                 }
                 // the query object is not modified
-                urlParts.pathname = '/' + this.removeColon(opt.graphProtocol);
+                urlParts.pathname = '/' + removeColon(opt.graphProtocol);
                 break;
 
             case 'mapsnapshot:':
@@ -364,29 +383,46 @@ VegaWrapper.prototype.dataParser = function dataParser(error, data, opt, callbac
 };
 
 /**
+ * Parses the response from MW Api, throwing an error or logging warnings
+ */
+VegaWrapper.prototype.parseMWApiResponse = function parseMWApiResponse(data) {
+    data = JSON.parse(data);
+    if (data.error) {
+        throw new Error('API error: ' + JSON.stringify(data.error));
+    }
+    if (data.warnings) {
+        this.logger('API warnings: ' + JSON.stringify(data.warnings));
+    }
+    return data;
+};
+
+/**
  * Performs post-processing of the data requested by the graph's spec, and throw on error
  */
 VegaWrapper.prototype.parseDataOrThrow = function parseDataOrThrow(data, opt) {
     switch (opt.graphProtocol) {
         case 'wikiapi:':
+            data = this.parseMWApiResponse(data);
+            break;
         case 'wikiraw:':
-            // This was an API call - check for errors
-            data = JSON.parse(data);
-            if (data.error) {
-                throw new Error('API error: ' + JSON.stringify(data.error));
-            }
-            if (data.warnings) {
-                this.logger('API warnings: ' + JSON.stringify(data.warnings));
-            }
-            if (opt.graphProtocol === 'wikiraw:') {
-                try {
-                    data = data.query.pages[0].revisions[0].content;
-                } catch (e) {
-                    throw new Error('Page content not available ' + opt.url);
-                }
+            data = this.parseMWApiResponse(data);
+            try {
+                data = data.query.pages[0].revisions[0].content;
+            } catch (e) {
+                throw new Error('Page content not available ' + opt.url);
             }
             break;
-
+        case 'tabular:':
+            data = this.parseMWApiResponse(data).jsondata;
+            var fields = data.schema.fields.map(function(v) { return v.name; });
+            data.data = data.data.map(function(v) {
+                var row = {}, i;
+                for (i = 0; i < fields.length; i++) {
+                    row[fields[i]] = v[i];
+                }
+                return row;
+            });
+            break;
         case 'wikidatasparql:':
             data = JSON.parse(data);
             if (!data.results || !Array.isArray(data.results.bindings)) {

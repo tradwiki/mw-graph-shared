@@ -247,8 +247,8 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                         action: 'jsondata',
                         title: decodedPathname.substring(1)
                     };
-                    if (this.languageCode) {
-                        urlParts.query.uselang = this.languageCode;
+                    if (urlParts.siteLanguage || this.languageCode) {
+                        urlParts.query.uselang = urlParts.siteLanguage || this.languageCode;
                     }
                 }
 

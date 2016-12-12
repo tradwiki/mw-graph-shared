@@ -419,7 +419,9 @@ VegaWrapper.prototype.parseDataOrThrow = function parseDataOrThrow(data, opt) {
             data.data = data.data.map(function(v) {
                 var row = {}, i;
                 for (i = 0; i < fields.length; i++) {
-                    row[fields[i]] = v[i];
+                    if (v[i] !== null) {
+                        row[fields[i]] = v[i];
+                    }
                 }
                 return row;
             });

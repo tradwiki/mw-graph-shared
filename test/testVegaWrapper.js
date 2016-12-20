@@ -254,6 +254,21 @@ describe('vegaWrapper', function() {
         passWithCors('tabular://sec/aaa', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=aaa&uselang=en');
         passWithCors('tabular://sec/abc/def', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc%2Fdef&uselang=en');
         passWithCors('tabular://wikiraw.sec.org/abc', 'https://wikiraw.sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc&uselang=en');
+
+        fail('map://sec.org');
+        fail('map://sec.org/');
+        fail('map://sec.org/?a=10');
+        fail('map://asec.org/aaa');
+        fail('map:///abc|xyz');
+        fail('map://sec.org/abc|xyz');
+        passWithCors('map:///abc', 'https://domain.sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc&uselang=en');
+        passWithCors('map:///abc/xyz', 'https://domain.sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc%2Fxyz&uselang=en');
+        passWithCors('map://sec.org/aaa', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=aaa&uselang=en');
+        passWithCors('map://sec.org/aaa?a=10', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=aaa&uselang=en');
+        passWithCors('map://sec.org/abc/def', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc%2Fdef&uselang=en');
+        passWithCors('map://sec/aaa', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=aaa&uselang=en');
+        passWithCors('map://sec/abc/def', 'https://sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc%2Fdef&uselang=en');
+        passWithCors('map://wikiraw.sec.org/abc', 'https://wikiraw.sec.org/w/api.php?format=json&formatversion=2&action=jsondata&title=abc&uselang=en');
     });
 
     it('sanitizeUrl for type=open', function () {
@@ -290,64 +305,111 @@ describe('vegaWrapper', function() {
     });
 
     it('dateParser', function () {
-        var wrapper = createWrapper(),
-            pass = function (expected, data, graphProtocol, dontEncode) {
-                assert.deepStrictEqual(
-                    wrapper.parseDataOrThrow(
-                        dontEncode ? data : JSON.stringify(data),
-                        {graphProtocol: graphProtocol}),
-                    expected, graphProtocol)
-            },
-            fail = function (data, graphProtocol) {
-                expectError(function () {
-                    return wrapper.parseDataOrThrow(
-                        dontEncode ? data : JSON.stringify(data),
-                        {graphProtocol: graphProtocol});
-                }, graphProtocol, ['VegaWrapper.parseDataOrThrow']);
-            };
+            var wrapper = createWrapper(),
+                pass = function (expected, data, graphProtocol, dontEncode) {
+                    assert.deepStrictEqual(
+                        wrapper.parseDataOrThrow(
+                            dontEncode ? data : JSON.stringify(data),
+                            {graphProtocol: graphProtocol}),
+                        expected)
+                },
+                fail = function (data, graphProtocol) {
+                    expectError(function () {
+                        return wrapper.parseDataOrThrow(
+                            dontEncode ? data : JSON.stringify(data),
+                            {graphProtocol: graphProtocol});
+                    }, graphProtocol, ['VegaWrapper.parseDataOrThrow']);
+                };
 
-        fail(undefined, undefined, new Error());
+            fail(undefined, undefined, new Error());
 
-        pass(1, 1, 'test:', true);
+            pass(1, 1, 'test:', true);
 
-        fail({error: 'blah'}, 'wikiapi:');
-        pass({blah: 1}, {blah: 1}, 'wikiapi:');
+            fail({error: 'blah'}, 'wikiapi:');
+            pass({blah: 1}, {blah: 1}, 'wikiapi:');
 
-        fail({error: 'blah'}, 'wikiraw:');
-        fail({blah: 1}, 'wikiraw:');
-        pass('blah', {query: {pages: [{revisions: [{content: 'blah'}]}]}}, 'wikiraw:');
+            fail({error: 'blah'}, 'wikiraw:');
+            fail({blah: 1}, 'wikiraw:');
+            pass('blah', {query: {pages: [{revisions: [{content: 'blah'}]}]}}, 'wikiraw:');
 
-        fail({error: 'blah'}, 'wikidatasparql:');
-        fail({blah: 1}, 'wikidatasparql:');
-        fail({results: false}, 'wikidatasparql:');
-        fail({results: {bindings: false}}, 'wikidatasparql:');
-        pass([], {results: {bindings: []}}, 'wikidatasparql:');
-        pass([{int: 42, float: 42.5, geo: [42, 144.5]}, {uri: 'Q42'}], {
-            results: {
-                bindings: [{
-                    int: {
-                        type: 'literal',
-                        'datatype': 'http://www.w3.org/2001/XMLSchema#int',
-                        value: '42'
+            fail({error: 'blah'}, 'wikidatasparql:');
+            fail({blah: 1}, 'wikidatasparql:');
+            fail({results: false}, 'wikidatasparql:');
+            fail({results: {bindings: false}}, 'wikidatasparql:');
+            pass([], {results: {bindings: []}}, 'wikidatasparql:');
+            pass([{int: 42, float: 42.5, geo: [42, 144.5]}, {uri: 'Q42'}], {
+                results: {
+                    bindings: [{
+                        int: {
+                            type: 'literal',
+                            'datatype': 'http://www.w3.org/2001/XMLSchema#int',
+                            value: '42'
+                        },
+                        float: {
+                            type: 'literal',
+                            'datatype': 'http://www.w3.org/2001/XMLSchema#float',
+                            value: '42.5'
+                        },
+                        geo: {
+                            type: 'literal',
+                            'datatype': 'http://www.opengis.net/ont/geosparql#wktLiteral',
+                            value: 'Point(42 144.5)'
+                        }
+                    }, {
+                        uri: {
+                            type: 'uri',
+                            value: 'http://www.wikidata.org/entity/Q42'
+                        }
+                    }]
+                }
+            }, 'wikidatasparql:');
+
+            pass({
+                    meta: [{
+                        description: 'desc',
+                        license_code: 'CC0-1.0+',
+                        license_text: 'abc',
+                        license_url: 'URL',
+                        sources: 'src'
+                    }],
+                    fields: [{name: 'fld1'}],
+                    data: [{fld1: 42}]
+                },
+                {
+                    jsondata: {
+                        description: 'desc',
+                        sources: 'src',
+                        license: {code: 'CC0-1.0+', text: 'abc', url: 'URL'},
+                        schema: {fields: [{name: 'fld1'}]},
+                        data: [[42]]
                     },
-                    float: {
-                        type: 'literal',
-                        'datatype': 'http://www.w3.org/2001/XMLSchema#float',
-                        value: '42.5'
+                }, 'tabular:');
+
+            pass({
+                    meta: [{
+                        description: 'desc',
+                        license_code: 'CC0-1.0+',
+                        license_text: 'abc',
+                        license_url: 'URL',
+                        sources: 'src',
+                        longitude: 10,
+                        latitude: 20,
+                        zoom: 3,
+                    }],
+                    data: "map"
+                },
+                {
+                    jsondata: {
+                        description: 'desc',
+                        sources: 'src',
+                        license: {code: 'CC0-1.0+', text: 'abc', url: 'URL'},
+                        longitude: 10,
+                        latitude: 20,
+                        zoom: 3,
+                        data: "map"
                     },
-                    geo: {
-                        type: 'literal',
-                        'datatype': 'http://www.opengis.net/ont/geosparql#wktLiteral',
-                        value: 'Point(42 144.5)'
-                    }
-                }, {
-                    uri: {
-                        type: 'uri',
-                        value: 'http://www.wikidata.org/entity/Q42'
-                    }
-                }]
-            }
-        }, 'wikidatasparql:');
-    });
+                }, 'map:');
+        }
+    );
 
 });

@@ -1,21 +1,18 @@
 {
-  "name": "graph-shared",
+  "name": "mw-graph-shared",
   "version": "0.3.6",
   "description": "Shared code for Wikipedia's Graph extension and Graphoid Service",
   "main": "src/VegaWrapper.js",
   "scripts": {
     "test": "mocha"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/nyurik/graph-shared.git"
-  },
+  "repository": "nyurik/mw-graph-shared",
   "keywords": [
     "graph",
     "wikimedia",
     "graphoid"
   ],
-  "author": "Yuri Astrakhan <yurik@wikimedia.org>",
+  "author": "Yuri Astrakhan <YuriAstrakhan@gmail.com>",
   "dependencies": {
     "domain-validator": "^0.0.3",
     "wd-type-parser": "^0.0.2"
@@ -25,5 +22,5 @@
     "mocha": "^2.4.5"
   },
   "license": "MIT",
-  "bugs": "https://github.com/nyurik/graph-shared/issues"
+  "bugs": "https://github.com/nyurik/mw-graph-shared/issues"
 }

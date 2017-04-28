@@ -238,7 +238,9 @@ describe('vegaWrapper', function() {
         fail('mapsnapshot://sec.org/');
         fail('mapsnapshot:///?width=100');
         fail('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5&style=@4');
+        fail('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5&style=a$b');
         pass('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5', 'http://maps.nonsec.org/img/osm-intl,5,10,10,100x100@2x.png');
+        pass('mapsnapshot:///?width=100&height=100&lat=10&lon=10&zoom=5&style=osm', 'http://maps.nonsec.org/img/osm,5,10,10,100x100@2x.png');
 
         fail('tabular://sec.org');
         fail('tabular://sec.org/');

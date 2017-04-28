@@ -318,7 +318,7 @@ VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
                 validate(urlParts, 'lon', -180, 180, true);
 
                 var query = urlParts.query;
-                if (query.style && !/^[-_0-9a-z]$/.test(query.style)) {
+                if (query.style && !/^[-_0-9a-z]+$/.test(query.style)) {
                     throw new Error('mapsnapshot: if style is given, it must be letters/numbers/dash/underscores only');
                 }
 

@@ -20,12 +20,12 @@ function removeColon(protocol) {
 /**
  * Shared library to wrap around vega code
  * @param {Object} wrapperOpts Configuration options
- * @param {Object} wrapperOpts.datalib Vega's datalib object
- * @param {Object} wrapperOpts.datalib.load Vega's data loader
- * @param {Function} wrapperOpts.datalib.load.loader Vega's data loader function
- * @param {Function} wrapperOpts.datalib.extend similar to jquery's extend()
+ * @param {Object} wrapperOpts.data Vega's data object
+ * @param {Function} wrapperOpts.data.loader Vega's data loader object
+ * @param {Function} wrapperOpts.data.loader.load Vega's data loader object
+ * @param {Function} wrapperOpts.data.extend similar to jquery's extend()
  * @param {boolean} wrapperOpts.useXhr true if we should use XHR, false for node.js http loading
- * @param {boolean} wrapperOpts.isTrusted true if the graph spec can be trusted
+ * @param {boolean} wrapperOpts.isTrusted true if the grapsh spec can be trusted
  * @param {Object} wrapperOpts.domains allowed protocols and a list of their domains
  * @param {Object} wrapperOpts.domainMap domain remapping
  * @param {Function} wrapperOpts.logger
@@ -37,15 +37,17 @@ function removeColon(protocol) {
 function VegaWrapper(wrapperOpts) {
     var self = this;
     // Copy all options into this object
-    self.objExtender = wrapperOpts.datalib.extend;
+    self.objExtender = wrapperOpts.data.extend;
     self.objExtender(self, wrapperOpts);
     self.validators = {};
 
-    self.datalib.load.loader = function (opt, callback) {
+	//TODO:Might need adjustments for vega3 api
+	//seems http loader no longer uses cb in arguments...
+    self.data.loader = function (opt, callback) {
         var error = callback || function (e) { throw e; }, url;
 
         try {
-            url = self.sanitizeUrl(opt); // enable override
+            url = self.sanitize(url,opt); // enable override
         } catch (err) {
             error(err);
             return;
@@ -56,24 +58,16 @@ function VegaWrapper(wrapperOpts) {
             return self.dataParser(error, data, opt, callback);
         };
 
-        if (self.useXhr) {
-            return self.datalib.load.xhr(url, opt, cb);
-        } else {
-            return self.datalib.load.http(url, opt, cb);
-        }
+
+        return self.data.loader.http(url, opt, cb);
+
     };
 
-    self.datalib.load.sanitizeUrl = self.sanitizeUrl.bind(self);
+    self.data.loader.sanitize = self.sanitize.bind(self);
 
     // Prevent accidental use
-    self.datalib.load.file = alwaysFail;
-    if (self.useXhr) {
-        self.datalib.load.http = alwaysFail;
-    } else {
-        self.datalib.load.xhr = alwaysFail;
-    }
+    self.data.loader.file = alwaysFail;
 }
-
 /**
  * Check if host was listed in the allowed domains, normalize it, and get correct protocol
  * @param {string} host
@@ -125,7 +119,7 @@ VegaWrapper.prototype._getProtocolDomains = function _getProtocolDomains(protoco
  * @param {Object} opt passed by the vega loader, and will add 'graphProtocol' param
  * @returns {boolean} true on success
  */
-VegaWrapper.prototype.sanitizeUrl = function sanitizeUrl(opt) {
+VegaWrapper.prototype.sanitize = function sanitize(opt) {
     // In some cases we may receive a badly formed URL in a form   customprotocol:https://...
     opt.url = opt.url.replace(/^([a-z]+:)https?:\/\//, '$1//');
 

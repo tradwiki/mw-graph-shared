@@ -43,8 +43,9 @@ function VegaWrapper(wrapperOpts) {
 
 	//TODO:Might need adjustments for vega3 api
 	//seems http loader no longer uses cb in arguments...
-    self.data.loader = function (opt, callback) {
-        var error = callback || function (e) { throw e; }, url;
+    self.data.loader = function (opt) {
+        var error = function (e) { throw e; },
+	    url;
 
         try {
             url = self.sanitize(url,opt); // enable override
@@ -54,13 +55,25 @@ function VegaWrapper(wrapperOpts) {
         }
 
         // Process data response
-        var cb = function (error, data) {
-            return self.dataParser(error, data, opt, callback);
-        };
+        //var cb = function (error, data) {
+        //    return self.dataParser(error, data, opt, callback);
+        //};
 
-
-        return self.data.loader.http(url, opt, cb);
-
+        return new Promise(function (accept, reject){
+		try{
+			self.data.loader.http(url, opt)
+				.then(function(rawResult){
+					var parsedResult = self.dataParser(error, rawResult, opt);
+					if(parsedResult){
+						accept(parsedResult);
+					} else {
+						reject();
+					}
+				});
+		} catch (e) {
+			error(e);
+		}
+	});
     };
 
     self.data.loader.sanitize = self.sanitize.bind(self);
@@ -375,7 +388,7 @@ VegaWrapper.prototype.dataParser = function dataParser(error, data, opt, callbac
         }
     }
     if (error) data = undefined;
-    callback(error, data);
+    callback(data);
 };
 
 /**

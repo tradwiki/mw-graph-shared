@@ -42,36 +42,54 @@ module.exports.removeColon = removeColon;
     self.objExtender = wrapperOpts.data.extend;
     self.objExtender(self, wrapperOpts);
     self.validators = {};
+
+    //console.log(self.data.loader.http);
+    //console.log(self.data.loader().http);
     self.data.loader = function(options) {
-        return {
+        console.log("loader()");
+        var newLoader = {
             options: options || {},
-            sanitize: self.sanitize,
+            sanitize: self.sanitize.bind(self),
+            // load: function (url, opt) {
+            //     console.log("load(" + url + ', ' + opt.context + ")")
+            //     var loader = this;
+            //     return self.sanitize(url, opt)
+            //         .then(function(opt2) {
+            //             console.log(opt2);
+            //             var url2 = opt2.href; 
+            //             return loader.http(url2, opt2)
+            //                 .then(function(rawResult){
+            //                     self.dataParser(rawResult, opt2);
+            //                 });
+            //         });
+            // },
             load: function (url, opt) {
-               var error = function (e) { throw e; };
-               return self.sanitize(url, options)
-               .then(function(opt) {
-                   var url = opt.href;
-                   return opt.localFile ? loader.file(url)
-                   :  new Promise(function (accept, reject){ 
-                      return loader.http(url, options)
-                      .then(function(rawResult){
-                       self.dataParser(error, rawResult, accept, reject);
-                   });});
-               });
-           },
-           file: alwaysFail,
-           http: self.data.loader.http
-       };
-   }
+                // console.log("load(" + url + ', ' + opt.context + ")")
+                var loader = this;
+                return loader.sanitize(url, opt)
+                    .then(function(opt2) {
+                        console.log(opt2);
+                        var url2 = opt2.href; 
+                        return loader.http(url2, opt2);
+                    });
+            },
+            file: alwaysFail,
+            http: self.data.http
+        };
+
+        console.log(newLoader);
+        return newLoader;
+ }
 
     // self.data.loader.load = 
 
     //debugger;
 
-    self.data.loader.sanitize = self.sanitize;
+    //self.data.loader.sanitize = self.sanitize.bind(self);
+    //self.parseUrl = self.parseUrl.bind(self);
 
     // Prevent accidental use
-    self.data.loader.file = alwaysFail;
+    //self.data.loader.file = alwaysFail;
 
     // wrapperOpts.data.vg.extend(self);
 }
@@ -126,30 +144,32 @@ module.exports.removeColon = removeColon;
 /**
  * Validate and update urlObj to be safe for client-side and server-side usage
  * @param {Object} opt passed by the vega loader, and will add 'graphProtocol' param
- * @returns {boolean} true on success
+ * @returns {Promise}
  */
  VegaWrapper.prototype.sanitize = function sanitize(url, opt) {
-    console.log("right sanitizer used");
-    // debugger;
+
+    var self = this;
     return new Promise(function(accept, reject) {
         var result = {href: null};
-
         if (url == null || typeof url !== 'string') {
             reject('Sanitize failure, invalid URL: ' + $(url));
             return;
         }
+
         // In some cases we may receive a badly formed URL in a form   customprotocol:https://...
         url = url.replace(/^([a-z]+:)https?:\/\//, '$1//');
 
+        
         var decodedPathname,
-        isRelativeProtocol = /^\/\//.test(url),
-        urlParts = this.parseUrl(opt),
-        sanitizedHost = this.sanitizeHost(urlParts.host);
+        isRelativeProtocol = /^\/\//.test(url);
+        var urlParts = self.parseUrl(url, opt);
+        var sanitizedHost = self.sanitizeHost(urlParts.host);
 
         if (!sanitizedHost) {
             reject('URL hostname is not whitelisted: ' + $(url));
             return;
         }
+
         urlParts.host = sanitizedHost.host;
         if (!urlParts.protocol) {
             // node.js mode only - browser's url parser will always set protocol to current one
@@ -160,7 +180,6 @@ module.exports.removeColon = removeColon;
 
         // Save original protocol to post-process the data
         opt.graphProtocol = urlParts.protocol;
-
         if (opt.type === 'open') {
 
             // Trim the value here because mediawiki will do it anyway, so we might as well save on redirect
@@ -169,18 +188,19 @@ module.exports.removeColon = removeColon;
             switch (urlParts.protocol) {
                 case 'http:':
                 case 'https:':
-                    // The default protocol for the open action is wikititle, so if isRelativeProtocol is set,
-                    // we treat the whole pathname as title (without the '/' prefix).
-                    if (!isRelativeProtocol) {
-                        // If we get http:// and https:// protocol hardcoded, remove the '/wiki/' prefix instead
-                        if (!/^\/wiki\/.+$/.test(decodedPathname)) {
-                            reject('wikititle: http(s) links must begin with /wiki/ prefix');
-                            return;
+                        // The default protocol for the open action is wikititle, so if isRelativeProtocol is set,
+                        // we treat the whole pathname as title (without the '/' prefix).
+                        if (!isRelativeProtocol) {
+                            // If we get http:// and https:// protocol hardcoded, remove the '/wiki/' prefix instead
+                            if (!/^\/wiki\/.+$/.test(decodedPathname)) {
+                                reject('wikititle: http(s) links must begin with /wiki/ prefix');
+                                return;
+                            }
+                            decodedPathname = decodedPathname.substring('/wiki'.length);
                         }
-                        decodedPathname = decodedPathname.substring('/wiki'.length);
-                    }
-                    opt.graphProtocol = 'wikititle';
-                    // fall-through
+
+                        opt.graphProtocol = 'wikititle';
+                        // fall-through
 
                     case 'wikititle:':
                     // wikititle:///My_page   or   wikititle://en.wikipedia.org/My_page
@@ -201,13 +221,12 @@ module.exports.removeColon = removeColon;
                     default:
                     reject('"open()" action only allows links with wikititle protocol, e.g. wikititle:///My_page');
                     return;
-                }
-            } else {
-
+            }
+        } else {
                 switch (urlParts.protocol) {
                     case 'http:':
                     case 'https:':
-                    if (!this.isTrusted) {
+                    if (!self.isTrusted) {
                         reject('HTTP and HTTPS protocols are not supported for untrusted graphs.\n' +
                             'Use wikiraw:, wikiapi:, wikirest:, wikirawupload:, and other protocols.\n' +
                             'See https://www.mediawiki.org/wiki/Extension:Graph#External_data');
@@ -219,7 +238,7 @@ module.exports.removeColon = removeColon;
                 case 'wikiapi:':
                 // wikiapi:///?action=query&list=allpages
                 // Call to api.php - ignores the path parameter, and only uses the query
-                urlParts.query = this.objExtender(urlParts.query, {format: 'json', formatversion: '2'});
+                urlParts.query = self.objExtender(urlParts.query, {format: 'json', formatversion: '2'});
                 urlParts.pathname = '/w/api.php';
                 urlParts.protocol = sanitizedHost.protocol;
                 opt.addCorsOrigin = true;
@@ -268,8 +287,8 @@ module.exports.removeColon = removeColon;
                         action: 'jsondata',
                         title: decodedPathname.substring(1)
                     };
-                    if (urlParts.siteLanguage || this.languageCode) {
-                        urlParts.query.uselang = urlParts.siteLanguage || this.languageCode;
+                    if (urlParts.siteLanguage || self.languageCode) {
+                        urlParts.query.uselang = urlParts.siteLanguage || self.languageCode;
                     }
                 }
 
@@ -290,7 +309,7 @@ module.exports.removeColon = removeColon;
                 // wikirawupload://upload.wikimedia.org/wikipedia/commons/3/3e/Einstein_1921.jpg
                 // Get an image for the graph, e.g. from commons
                 // This tag specifies any content from the uploads.* domain, without query params
-                this._validateExternalService(urlParts, sanitizedHost, url);
+                self._validateExternalService(urlParts, sanitizedHost, url);
                 urlParts.query = {};
                 // keep urlParts.pathname
                 break;
@@ -299,7 +318,7 @@ module.exports.removeColon = removeColon;
                 // wikidatasparql:///?query=<QUERY>
                 // Runs a SPARQL query, converting it to
                 // https://query.wikidata.org/bigdata/namespace/wdq/sparql?format=json&query=...
-                this._validateExternalService(urlParts, sanitizedHost, url);
+                self._validateExternalService(urlParts, sanitizedHost, url);
                 if (!urlParts.query || !urlParts.query.query) {
                     reject('wikidatasparql: missing query parameter in: ' + url);
                     return;
@@ -307,7 +326,7 @@ module.exports.removeColon = removeColon;
                 // Only keep the "query" parameter
                 urlParts.query = {query: urlParts.query.query};
                 urlParts.pathname = '/bigdata/namespace/wdq/sparql';
-                opt.headers = this.objExtender(opt.headers || {}, {'Accept': 'application/sparql-results+json'});
+                opt.headers = self.objExtender(opt.headers || {}, {'Accept': 'application/sparql-results+json'});
                 break;
 
                 case 'geoshape:':
@@ -316,7 +335,7 @@ module.exports.removeColon = removeColon;
                 // Get geoshapes data from OSM database by supplying Wikidata IDs
                 // https://maps.wikimedia.org/shape?ids=Q16,Q30
                 // 'geoline:' is an identical service, except that it returns lines instead of polygons
-                this._validateExternalService(urlParts, sanitizedHost, url, 'geoshape:');
+                self._validateExternalService(urlParts, sanitizedHost, url, 'geoshape:');
                 if (!urlParts.query || (!urlParts.query.ids && !urlParts.query.query)) {
                     reject(opt.graphProtocol + ' missing ids or query parameter in: ' + url);
                     return;
@@ -347,7 +366,7 @@ module.exports.removeColon = removeColon;
                 }
 
                 // Uses the same configuration as geoshape service, so reuse settings
-                this._validateExternalService(urlParts, sanitizedHost, url, 'geoshape:');
+                self._validateExternalService(urlParts, sanitizedHost, url, 'geoshape:');
 
                 urlParts.pathname = '/img/' + (query.style || 'osm-intl') + ',' + query.zoom + ',' +
                 query.lat + ',' + query.lon + ',' + query.width + 'x' + query.height + '@2x.png';
@@ -359,8 +378,8 @@ module.exports.removeColon = removeColon;
                 return;
             }
         }
-
-        accept({href: this.formatUrl(urlParts, opt)});
+        console.log("accepting url! " + opt.context);
+        accept({href: self.formatUrl(urlParts, opt)});
         return;
     });
 }
@@ -399,20 +418,23 @@ VegaWrapper.prototype._validateExternalService = function _validateExternalServi
 /**
  * Performs post-processing of the data requested by the graph's spec
  */
- VegaWrapper.prototype.dataParser = function dataParser(error, data, opt, accept, reject) {
-    if (!error) {
+VegaWrapper.prototype.dataParser = function dataParser(data, opt) {
+    console.log("Parsing for " + opt.toString());
+    var self = this;
+    return new Promise(function (accept, reject){
         try {
-            data = this.parseDataOrThrow(data, opt);
+            data = self.parseDataOrThrow(data, opt);
         } catch (e) {
-            error = e;
+            var error = e;
+            console.log("catching");
+            data = undefined;
+            reject(error);
+            
         }
-    }
-    if (error) { 
-        data = undefined; reject()
-    }       accept(data);
-   }
-}; else {
-
+        console.log("accepting data");
+        accept(data);
+    });
+};
 
 /**
  * Parses the response from MW Api, throwing an error or logging warnings
@@ -496,7 +518,6 @@ VegaWrapper.prototype._validateExternalService = function _validateExternalServi
         });
         break;
     }
-
     return data;
 };
 

@@ -52,12 +52,11 @@ module.exports.removeColon = removeColon;
                 return loader.sanitize(url, opt)
                     .then(function(opt2) {
                         var url2 = opt2.href; 
-                        return new Promise(function (accept, reject) {
-                            accept(loader.http(url2, opt2)
+                        return loader.http(url2, opt2)
                                 .then(function (rawData){
-                                    return self.dataParser(rawData, opt2)}));
-                        });  
-                    });
+                                    return self.dataParser(rawData, opt2)
+                                });
+                    });  
             },
             file: alwaysFail,
             http: self.data.http

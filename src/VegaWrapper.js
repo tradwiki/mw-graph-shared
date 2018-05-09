@@ -21,8 +21,8 @@ module.exports.removeColon = removeColon;
  * Shared library to wrap around vega code
  * @param {Object} wrapperOpts Configuration options
  * @param {Object} wrapperOpts.data Vega's data object
- * @param {Function} wrapperOpts.data.loader Vega's data loader object
- * @param {Function} wrapperOpts.data.loader.load Vega's data loader object
+ * @param {Function} wrapperOpts.data.loader Vega's data loader function
+ * @param {Function} wrapperOpts.data.loader.http Vega's http request function
  * @param {Function} wrapperOpts.data.extend similar to jquery's extend()
  * @param {boolean} wrapperOpts.useXhr true if we should use XHR, false for node.js http loading
  * @param {boolean} wrapperOpts.isTrusted true if the grapsh spec can be trusted
@@ -43,56 +43,28 @@ module.exports.removeColon = removeColon;
     self.objExtender(self, wrapperOpts);
     self.validators = {};
 
-    //console.log(self.data.loader.http);
-    //console.log(self.data.loader().http);
     self.data.loader = function(options) {
-        console.log("loader()");
-        var newLoader = {
+        return {
             options: options || {},
             sanitize: self.sanitize.bind(self),
-            // load: function (url, opt) {
-            //     console.log("load(" + url + ', ' + opt.context + ")")
-            //     var loader = this;
-            //     return self.sanitize(url, opt)
-            //         .then(function(opt2) {
-            //             console.log(opt2);
-            //             var url2 = opt2.href; 
-            //             return loader.http(url2, opt2)
-            //                 .then(function(rawResult){
-            //                     self.dataParser(rawResult, opt2);
-            //                 });
-            //         });
-            // },
             load: function (url, opt) {
-                // console.log("load(" + url + ', ' + opt.context + ")")
                 var loader = this;
                 return loader.sanitize(url, opt)
                     .then(function(opt2) {
-                        console.log(opt2);
                         var url2 = opt2.href; 
-                        return loader.http(url2, opt2);
+                        return new Promise(function (accept, reject) {
+                            accept(loader.http(url2, opt2)
+                                .then(function (rawData){
+                                    return self.dataParser(rawData, opt2)}));
+                        });  
                     });
             },
             file: alwaysFail,
             http: self.data.http
         };
-
-        console.log(newLoader);
-        return newLoader;
- }
-
-    // self.data.loader.load = 
-
-    //debugger;
-
-    //self.data.loader.sanitize = self.sanitize.bind(self);
-    //self.parseUrl = self.parseUrl.bind(self);
-
-    // Prevent accidental use
-    //self.data.loader.file = alwaysFail;
-
-    // wrapperOpts.data.vg.extend(self);
+    }
 }
+
 /**
  * Check if host was listed in the allowed domains, normalize it, and get correct protocol
  * @param {string} host
@@ -378,7 +350,6 @@ module.exports.removeColon = removeColon;
                 return;
             }
         }
-        console.log("accepting url! " + opt.context);
         accept({href: self.formatUrl(urlParts, opt)});
         return;
     });
@@ -419,19 +390,16 @@ VegaWrapper.prototype._validateExternalService = function _validateExternalServi
  * Performs post-processing of the data requested by the graph's spec
  */
 VegaWrapper.prototype.dataParser = function dataParser(data, opt) {
-    console.log("Parsing for " + opt.toString());
     var self = this;
     return new Promise(function (accept, reject){
         try {
             data = self.parseDataOrThrow(data, opt);
         } catch (e) {
             var error = e;
-            console.log("catching");
             data = undefined;
             reject(error);
             
         }
-        console.log("accepting data");
         accept(data);
     });
 };

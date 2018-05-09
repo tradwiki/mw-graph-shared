@@ -112,11 +112,10 @@ module.exports.removeColon = removeColon;
 };
 
 
-//TODO: Change so that it returns a promise
 /**
  * Validate and update urlObj to be safe for client-side and server-side usage
  * @param {Object} opt passed by the vega loader, and will add 'graphProtocol' param
- * @returns {Promise}
+ * @returns {Promise} that evaluated to sanitized url
  */
  VegaWrapper.prototype.sanitize = function sanitize(url, opt) {
 	console.log("sanitizing")

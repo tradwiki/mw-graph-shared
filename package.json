@@ -1,12 +1,12 @@
 {
-  "name": "mw-graph-shared",
-  "version": "0.3.6",
-  "description": "Shared code for Wikipedia's Graph extension and Graphoid Service",
+  "name": "yochie-mw-graph-shared",
+  "version": "0.1",
+  "description": "Shared code for Wikipedia's Graph extension and Graphoid Service. Forked for vega 3.",
   "main": "src/VegaWrapper.js",
   "scripts": {
     "test": "mocha"
   },
-  "repository": "nyurik/mw-graph-shared",
+  "repository": "yochie/mw-graph-shared",
   "keywords": [
     "graph",
     "wikimedia",

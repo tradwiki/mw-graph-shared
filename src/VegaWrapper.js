@@ -197,6 +197,12 @@ module.exports.removeColon = removeColon;
         } else {
 
                 //TODO:https and wikiraw tested, still need to test all other protocols.
+                //In the meantime, adding console message and failing if other protocols are used.
+              	if(urlParts.protocol !== "http:" && urlParts.protocol !== "https:" && urlParts.protocol !== "wikiraw:"){
+                	console.log("Only http, https and wikiraw are supported for vega 3 graphs. Use vega 2 to use those protocols.");
+                	reject("Only http, https and wikiraw are supported for vega 3 graphs. Use vega 2 to use those protocols.");
+                }
+                
                 switch (urlParts.protocol) {
                     case 'http:':
                     case 'https:':

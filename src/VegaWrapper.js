@@ -88,7 +88,6 @@ module.exports.removeColon = removeColon;
  * @returns {boolean}
  */
  VegaWrapper.prototype.testHost = function testHost(protocol, host) {
-    console.log("testing host " + host + " with protocol " + protocol);
     if (!this.validators[protocol]) {
         var domains = this._getProtocolDomains(protocol);
         if (domains) {
@@ -118,7 +117,6 @@ module.exports.removeColon = removeColon;
  * @returns {Promise} that evaluated to sanitized url
  */
  VegaWrapper.prototype.sanitize = function sanitize(url, opt) {
-	console.log("sanitizing")
     var self = this;
     return new Promise(function(accept, reject) {
         var result = {href: null};
@@ -134,12 +132,9 @@ module.exports.removeColon = removeColon;
         var decodedPathname,
         isRelativeProtocol = /^\/\//.test(url);
         var urlParts = self.parseUrl(url, opt);
-       	console.log(urlParts.protocol);
-        console.log(urlParts.host);
         var sanitizedHost = self.sanitizeHost(urlParts.host);
 
         if (!sanitizedHost) {
-            console.log("rejecting host");
             reject('URL hostname is not whitelisted: ' + $(url));
             return;
         }
@@ -157,7 +152,6 @@ module.exports.removeColon = removeColon;
 
         //TODO: opt.type isn't used in vega 3. Still need to figure out when open type was used and 
         //adjust this section accordingly.
-        console.log(opt.type + " with protocol " + opt.graphProtocol);
         if (opt.type === 'open') {
 
             // Trim the value here because mediawiki will do it anyway, so we might as well save on redirect
@@ -246,7 +240,6 @@ module.exports.removeColon = removeColon;
                 // Uses mediawiki api, and extract the content after the request
                 // Query value must be a valid MediaWiki title string, but we only ensure
                 // there is no pipe symbol, the rest is handled by the api.
-                console.log("sanitizing wikiraw/tabular/map url");
                 decodedPathname = decodeURIComponent(urlParts.pathname);
                 if (!/^\/[^|]+$/.test(decodedPathname)) {
                     reject(urlParts.protocol + ' invalid title');
@@ -361,9 +354,7 @@ module.exports.removeColon = removeColon;
                 return;
             }
         }
-        console.log("about to format");
         let toreturn = {href: self.formatUrl(urlParts, opt)};
-        console.log(toreturn);
         accept(toreturn);
         return;
     });
@@ -405,7 +396,6 @@ VegaWrapper.prototype._validateExternalService = function _validateExternalServi
  */
 VegaWrapper.prototype.dataParser = function dataParser(data, opt) {
     var self = this;
-    	console.log("parsing with protocol " + opt.graphProtocol);
     return new Promise(function (accept, reject){
         try {
             data = self.parseDataOrThrow(data, opt);
